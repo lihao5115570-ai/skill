@@ -1,5 +1,5 @@
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const frontendOut = resolve(root, "frontend", "out");
@@ -17,9 +17,38 @@ mkdirSync(serverDir, { recursive: true });
 cpSync(frontendOut, publicDir, { recursive: true });
 cpSync(resolve(root, ".openai"), resolve(dist, ".openai"), { recursive: true });
 
+function collectHtmlRoutes(dir, baseDir = dir) {
+  const routes = {};
+  for (const entry of readdirSync(dir)) {
+    const fullPath = join(dir, entry);
+    if (statSync(fullPath).isDirectory()) {
+      Object.assign(routes, collectHtmlRoutes(fullPath, baseDir));
+      continue;
+    }
+    if (!entry.endsWith(".html")) {
+      continue;
+    }
+    const assetPath = "/" + relative(baseDir, fullPath).split(sep).join("/");
+    const html = readFileSync(fullPath, "utf8");
+    routes[assetPath] = html;
+    if (assetPath === "/index.html") {
+      routes["/"] = html;
+    } else if (assetPath.endsWith("/index.html")) {
+      routes[assetPath.slice(0, -"/index.html".length)] = html;
+    } else {
+      routes[assetPath.slice(0, -".html".length)] = html;
+    }
+  }
+  return routes;
+}
+
+const htmlRoutes = collectHtmlRoutes(publicDir);
+
 writeFileSync(
   resolve(serverDir, "index.js"),
-  `function assetBinding(env) {
+  `const htmlRoutes = ${JSON.stringify(htmlRoutes)};
+
+function assetBinding(env) {
   return env?.ASSETS || env?.assets || env?.STATIC_ASSETS;
 }
 
@@ -39,12 +68,30 @@ function candidatePaths(pathname) {
 }
 
 async function fetchAsset(request, env) {
+  const url = new URL(request.url);
+  const html = htmlRoutes[url.pathname] || htmlRoutes[url.pathname.replace(/\\/$/, "")];
+  if (html) {
+    return new Response(html, {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache"
+      }
+    });
+  }
+
   const binding = assetBinding(env);
   if (!binding || typeof binding.fetch !== "function") {
     return new Response("Static asset binding is unavailable.", { status: 500 });
   }
-  const url = new URL(request.url);
   for (const pathname of candidatePaths(url.pathname)) {
+    if (htmlRoutes[pathname]) {
+      return new Response(htmlRoutes[pathname], {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-cache"
+        }
+      });
+    }
     const assetUrl = new URL(request.url);
     assetUrl.pathname = pathname;
     const response = await binding.fetch(new Request(assetUrl, request));
