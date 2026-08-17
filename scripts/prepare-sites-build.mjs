@@ -42,11 +42,47 @@ function collectHtmlRoutes(dir, baseDir = dir) {
   return routes;
 }
 
+function collectTextAssetRoutes(dir, baseDir = dir) {
+  const routes = {};
+  const textExtensions = new Set([".css", ".js", ".json", ".svg", ".txt", ".webmanifest"]);
+  for (const entry of readdirSync(dir)) {
+    const fullPath = join(dir, entry);
+    if (statSync(fullPath).isDirectory()) {
+      Object.assign(routes, collectTextAssetRoutes(fullPath, baseDir));
+      continue;
+    }
+    const dotIndex = entry.lastIndexOf(".");
+    const extension = dotIndex >= 0 ? entry.slice(dotIndex) : "";
+    if (!textExtensions.has(extension)) {
+      continue;
+    }
+    const assetPath = "/" + relative(baseDir, fullPath).split(sep).join("/");
+    routes[assetPath] = readFileSync(fullPath, "utf8");
+  }
+  return routes;
+}
+
 const htmlRoutes = collectHtmlRoutes(publicDir);
+const textAssetRoutes = collectTextAssetRoutes(publicDir);
 
 writeFileSync(
   resolve(serverDir, "index.js"),
   `const htmlRoutes = ${JSON.stringify(htmlRoutes)};
+const textAssetRoutes = ${JSON.stringify(textAssetRoutes)};
+
+const textAssetTypes = {
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8"
+};
+
+function contentTypeFor(pathname) {
+  const match = pathname.match(/\\.[^.]+$/);
+  return textAssetTypes[match?.[0] || ""] || "application/octet-stream";
+}
 
 function assetBinding(env) {
   return env?.ASSETS || env?.assets || env?.STATIC_ASSETS;
@@ -69,6 +105,16 @@ function candidatePaths(pathname) {
 
 async function fetchAsset(request, env) {
   const url = new URL(request.url);
+  const textAsset = textAssetRoutes[url.pathname];
+  if (textAsset !== undefined) {
+    return new Response(textAsset, {
+      headers: {
+        "Content-Type": contentTypeFor(url.pathname),
+        "Cache-Control": url.pathname.includes("/_next/") ? "public, max-age=31536000, immutable" : "no-cache"
+      }
+    });
+  }
+
   const html = htmlRoutes[url.pathname] || htmlRoutes[url.pathname.replace(/\\/$/, "")];
   if (html) {
     return new Response(html, {
