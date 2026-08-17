@@ -19,12 +19,18 @@ cpSync(resolve(root, ".openai"), resolve(dist, ".openai"), { recursive: true });
 
 writeFileSync(
   resolve(serverDir, "index.js"),
-  `import { createServer } from "node:http";
-import { createReadStream, existsSync, statSync } from "node:fs";
-import { extname, join, normalize } from "node:path";
-import { fileURLToPath } from "node:url";
+  `const { createServer } = require("node:http");
+const { createReadStream, existsSync, statSync } = require("node:fs");
+const { extname, join, normalize, resolve } = require("node:path");
 
-const root = join(fileURLToPath(new URL(".", import.meta.url)), "..", "public");
+const root = [
+  resolve(__dirname, "..", "public"),
+  resolve(process.cwd(), "dist", "public"),
+  resolve(process.cwd(), "public")
+].find((candidate) => existsSync(candidate));
+if (!root) {
+  throw new Error("Cannot locate static public directory.");
+}
 const port = Number(process.env.PORT || 3000);
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
