@@ -19,63 +19,46 @@ cpSync(resolve(root, ".openai"), resolve(dist, ".openai"), { recursive: true });
 
 writeFileSync(
   resolve(serverDir, "index.js"),
-  `const { createServer } = require("node:http");
-const { createReadStream, existsSync, statSync } = require("node:fs");
-const { extname, join, normalize, resolve } = require("node:path");
-
-const root = [
-  resolve(__dirname, "..", "public"),
-  resolve(process.cwd(), "dist", "public"),
-  resolve(process.cwd(), "public")
-].find((candidate) => existsSync(candidate));
-if (!root) {
-  throw new Error("Cannot locate static public directory.");
+  `function assetBinding(env) {
+  return env?.ASSETS || env?.assets || env?.STATIC_ASSETS;
 }
-const port = Number(process.env.PORT || 3000);
-const contentTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".txt": "text/plain; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".ico": "image/x-icon",
-  ".woff": "font/woff",
-  ".woff2": "font/woff2"
-};
 
-function resolveRequestPath(urlPath) {
-  const clean = decodeURIComponent(urlPath.split("?")[0]);
-  const safe = normalize(clean).replace(/^([.][.][\\\\/])+/, "");
-  const candidates = [];
-  if (safe === "/" || safe === "") {
-    candidates.push(join(root, "index.html"));
-  } else {
-    const base = join(root, safe);
-    candidates.push(base);
+function candidatePaths(pathname) {
+  const clean = pathname.replace(/\\/+/g, "/");
+  if (clean === "/" || clean === "") {
+    return ["/index.html"];
+  }
+  const base = clean.endsWith("/") ? clean.slice(0, -1) : clean;
+  const candidates = [base];
+  if (!base.includes(".")) {
     candidates.push(base + ".html");
-    candidates.push(join(base, "index.html"));
+    candidates.push(base + "/index.html");
   }
-  candidates.push(join(root, "index.html"));
-  return candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile());
+  candidates.push("/index.html");
+  return candidates;
 }
 
-createServer((request, response) => {
-  const filePath = resolveRequestPath(request.url || "/");
-  if (!filePath) {
-    response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Not found");
-    return;
+async function fetchAsset(request, env) {
+  const binding = assetBinding(env);
+  if (!binding || typeof binding.fetch !== "function") {
+    return new Response("Static asset binding is unavailable.", { status: 500 });
   }
-  response.writeHead(200, {
-    "Content-Type": contentTypes[extname(filePath)] || "application/octet-stream",
-    "Cache-Control": filePath.includes("_next") ? "public, max-age=31536000, immutable" : "no-cache"
-  });
-  createReadStream(filePath).pipe(response);
-}).listen(port, "0.0.0.0");
+  const url = new URL(request.url);
+  for (const pathname of candidatePaths(url.pathname)) {
+    const assetUrl = new URL(request.url);
+    assetUrl.pathname = pathname;
+    const response = await binding.fetch(new Request(assetUrl, request));
+    if (response.status !== 404 || pathname === "/index.html") {
+      return response;
+    }
+  }
+  return new Response("Not found", { status: 404 });
+}
+
+export default {
+  fetch(request, env) {
+    return fetchAsset(request, env);
+  }
+};
 `,
 );
