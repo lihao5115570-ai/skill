@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>邮件已发送 - MAKE UP Reference</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="mr-header compact">
+      <a class="mr-brand" href="/"><strong>MAKE UP</strong><span>PLUS EARLY ACCESS</span></a>
+      <nav><a href="/plus">Plus</a><a href="/mailbox">邮件箱</a></nav>
+    </header>
+    <main class="mr-page mr-submit-result">
+      <p class="mr-meta">ACCOUNT / 邮箱确认</p>
+      <h1>确认邮件已发送</h1>
+      <p id="emailSentText">请到预览邮件箱打开确认邮件，点击确认链接后账号才会激活。</p>
+      <div class="mr-submit-actions">
+        <a class="mr-black-button" href="/mailbox">打开预览邮件箱</a>
+        <a class="mr-white-button" href="/plus">返回 Plus</a>
+      </div>
+    </main>
+    <script>
+      const email = sessionStorage.getItem("beauty-last-email");
+      if (email) document.getElementById("emailSentText").textContent = `确认邮件已发送到 ${email} 的预览邮件箱。`;
+    </script>
+  </body>
+</html>

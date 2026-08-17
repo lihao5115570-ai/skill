@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>博主申请后台 - MAKE UP Reference</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="mr-header compact">
+      <a class="mr-brand" href="/"><strong>MAKE UP</strong><span>MAKEUP<br />REFERENCE</span></a>
+      <nav><a href="/plus">Plus</a><a href="/blogger">博主入驻</a><a href="/privacy">隐私</a></nav>
+    </header>
+    <main class="mr-page">
+      <section class="mr-admin-head">
+        <div>
+          <p class="mr-meta">ADMIN / 博主申请箱</p>
+          <h1>你收到的入驻申请</h1>
+        </div>
+        <button class="mr-white-button" id="clearApplications" type="button">清空预览数据</button>
+      </section>
+      <section class="mr-admin-list" id="applicationList"></section>
+    </main>
+    <script>
+      const list = document.getElementById("applicationList");
+
+      function render() {
+        const applications = JSON.parse(localStorage.getItem("beauty-creator-applications") || "[]");
+        if (!applications.length) {
+          list.innerHTML = `<article class="mr-admin-empty"><h2>暂无申请</h2><p>从“博主入驻”页面提交后，会显示在这里。</p><a class="mr-black-button" href="/blogger">去提交一条</a></article>`;
+          return;
+        }
+        list.innerHTML = applications.map((item) => `
+          <article class="mr-admin-card">
+            <div class="mr-admin-avatar">${item.photo ? `<img src="${item.photo}" alt="${item.name}" />` : "<span>NO PHOTO</span>"}</div>
+            <div class="mr-admin-info">
+              <p class="mr-meta">${item.status} / ${item.createdAt}</p>
+              <h2>${item.name || "未命名博主"}</h2>
+              <dl>
+                <div><dt>参考页面</dt><dd>${item.referenceType || "-"}</dd></div>
+                <div><dt>平台</dt><dd>${item.platform || "-"}</dd></div>
+                <div><dt>邮箱</dt><dd>${item.email || "-"}</dd></div>
+                <div><dt>主页</dt><dd>${item.homeUrl ? `<a href="${item.homeUrl}" target="_blank" rel="noreferrer">${item.homeUrl}</a>` : "-"}</dd></div>
+                <div><dt>教程</dt><dd>${item.tutorialUrl ? `<a href="${item.tutorialUrl}" target="_blank" rel="noreferrer">${item.tutorialUrl}</a>` : "未填写"}</dd></div>
+              </dl>
+            </div>
+          </article>
+        `).join("");
+      }
+
+      document.getElementById("clearApplications").addEventListener("click", () => {
+        localStorage.removeItem("beauty-creator-applications");
+        render();
+      });
+      render();
+    </script>
+  </body>
+</html>

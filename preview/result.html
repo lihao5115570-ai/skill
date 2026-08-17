@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>个人分析 - MAKE UP Reference</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="mr-header compact">
+      <a class="mr-brand" href="/">
+        <strong>MAKE UP</strong>
+        <span>MAKEUP<br />REFERENCE</span>
+      </a>
+      <nav>
+        <a href="/plus">Plus</a>
+        <a href="/blogger">博主入驻</a>
+        <a href="/privacy">隐私</a>
+      </nav>
+    </header>
+
+    <main class="mr-page">
+      <section class="mr-result-title">
+        <div>
+          <p class="mr-meta">RESULT / 面部结构分析</p>
+          <h1>你的个人分析</h1>
+        </div>
+        <a class="mr-white-button" href="/start">↻ 重新选择</a>
+      </section>
+
+      <section class="mr-result-layout">
+        <div class="mr-photo-panel">
+          <div class="mr-photo-demo" id="resultPhoto"></div>
+          <div class="mr-photo-footer">
+            <div>
+              <strong id="resultFileName">demo-face-reference.png</strong>
+              <span>1170 x 780</span>
+              <em id="testerCount">你是第 13827 位完成测试的女生</em>
+            </div>
+            <a class="mr-black-button" href="/start">重新分析</a>
+          </div>
+        </div>
+
+        <aside class="mr-analysis-panel">
+          <div class="mr-panel-head">
+            <div>
+              <p class="mr-meta">ANALYSIS / 专业数据</p>
+              <h2>照片质量与面部比例</h2>
+            </div>
+            <span>分析完成</span>
+          </div>
+          <div class="mr-success">照片质量通过，已根据本次面部比例重新匹配相似博主。</div>
+
+          <div class="mr-metric-grid">
+            <div><span>脸部长宽比</span><strong id="metricFaceRatio">1.179</strong></div>
+            <div><span>下颌 / 颧骨宽度</span><strong id="metricJawRatio">0.757</strong></div>
+            <div><span>上庭 / 颧骨宽度</span><strong id="metricUpperRatio">1.017</strong></div>
+            <div><span>下庭长度占比</span><strong id="metricLowerRatio">0.396</strong></div>
+            <div><span>眼间距占脸宽</span><strong id="metricEyeSpacing">0.245</strong></div>
+            <div><span>双眼长宽比</span><strong id="metricEyeRatio">3.109</strong></div>
+            <div><span>鼻翼宽度占比</span><strong id="metricNoseRatio">0.231</strong></div>
+            <div><span>唇宽占比</span><strong id="metricLipRatio">0.327</strong></div>
+            <div><span>眉厚 / 唇宽</span><strong id="metricBrowLipRatio">0.431</strong></div>
+          </div>
+
+          <div class="mr-metric-legend">
+            <span><i class="legend-good"></i>达标</span>
+            <span><i class="legend-weak"></i>欠缺</span>
+            <span><i class="legend-mid"></i>中等</span>
+          </div>
+
+          <div class="mr-result-cards">
+            <article><p>我的脸型</p><strong id="faceShapeResult">鹅蛋脸</strong></article>
+            <article><p>我的优势</p><strong id="advantageResult">眼睛有辨识度</strong></article>
+            <article><p>提升方向</p><strong id="improvementResult">增强轮廓感</strong></article>
+          </div>
+
+          <div class="mr-usage-block">
+            <p class="mr-meta">WHAT THESE NUMBERS DO</p>
+            <ul>
+              <li>用脸长宽比、下颌宽度判断脸型和轮廓路线。</li>
+              <li>用眼距、眼型比例匹配面部结构更接近的博主。</li>
+              <li>用鼻翼、唇宽、眉唇比例决定妆容迁移强弱。</li>
+            </ul>
+          </div>
+
+          <div class="mr-match-block">
+            <p class="mr-meta">CREATOR MATCH</p>
+            <h3>推荐博主 Top 3</h3>
+            <div class="mr-side-creator-list" id="sideCreatorList"></div>
+            <div class="mr-match-row"><span id="bestMatchLabel">首选匹配</span><b id="bestMatchScore">92%</b></div>
+            <div class="mr-match-meter"><i id="bestMatchMeter"></i></div>
+            <div class="mr-mini-tags" id="bestMatchTags"></div>
+            <button class="mr-share-pk-button" id="sharePkButton" type="button">邀请闺蜜审美PK</button>
+            <p class="mr-share-note" id="sharePkNote">复制当前分析网址，发给闺蜜一起看。</p>
+          </div>
+        </aside>
+      </section>
+
+      <section class="mr-creator-section">
+        <p class="mr-meta">MATCH / 相似匹配</p>
+        <h2>和你面部结构更接近的博主</h2>
+        <article class="mr-featured-creator" id="featuredCreator"></article>
+
+        <div class="mr-plus-banner">
+          <div>
+            <p>限量付费内测</p>
+            <h3>把面部分析，变成可执行的妆造方案</h3>
+            <span>详细面容报告 · 3 套妆造方案 · 公开博主线索</span>
+          </div>
+          <div>
+            <strong>¥9.9</strong>
+            <a href="/plus">获取 Plus 报告 →</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="mr-more-section">
+        <p class="mr-meta">MORE / 更多参照</p>
+        <h2>也可以看看这些博主</h2>
+        <div class="mr-more-grid" id="moreCreatorGrid"></div>
+      </section>
+    </main>
+
+    <script>
+      const metricKeys = {
+        face_length_width_ratio: "metricFaceRatio",
+        jaw_cheekbone_width_ratio: "metricJawRatio",
+        upper_face_cheekbone_ratio: "metricUpperRatio",
+        lower_face_ratio: "metricLowerRatio",
+        eye_spacing_face_width_ratio: "metricEyeSpacing",
+        eye_aspect_ratio: "metricEyeRatio",
+        nose_width_ratio: "metricNoseRatio",
+        lip_width_ratio: "metricLipRatio",
+        brow_lip_ratio: "metricBrowLipRatio",
+      };
+
+      const fallbackMetrics = {
+        face_length_width_ratio: 1.179,
+        jaw_cheekbone_width_ratio: 0.757,
+        upper_face_cheekbone_ratio: 1.017,
+        lower_face_ratio: 0.396,
+        eye_spacing_face_width_ratio: 0.245,
+        eye_aspect_ratio: 3.109,
+        nose_width_ratio: 0.231,
+        lip_width_ratio: 0.327,
+        brow_lip_ratio: 0.431,
+      };
+
+      const metricStandards = {
+        face_length_width_ratio: [1.13, 1.24],
+        jaw_cheekbone_width_ratio: [0.74, 0.84],
+        upper_face_cheekbone_ratio: [0.96, 1.04],
+        lower_face_ratio: [0.36, 0.40],
+        eye_spacing_face_width_ratio: [0.23, 0.27],
+        eye_aspect_ratio: [2.85, 3.25],
+        nose_width_ratio: [0.21, 0.25],
+        lip_width_ratio: [0.30, 0.34],
+        brow_lip_ratio: [0.34, 0.40],
+      };
+
+      const creators = [
+        {
+          name: "大娜娜 Nana",
+          handle: "Sunny99nana",
+          style: "轻奢淡颜",
+          avatar: "https://pic.kaogujia.com/author/62739255052.jpeg?auth_key=1786678183-0-0-4fb09623b63459822dee2a23a3de0193",
+          source: "https://www.douyin.com/search/Sunny99nana",
+          tutorial: "https://www.douyin.com/search/Sunny99nana%20%E5%A6%86%E5%AE%B9",
+          target: { face_length_width_ratio: 1.18, jaw_cheekbone_width_ratio: 0.76, upper_face_cheekbone_ratio: 1.02, lower_face_ratio: 0.39, eye_spacing_face_width_ratio: 0.245, eye_aspect_ratio: 3.08, nose_width_ratio: 0.23, lip_width_ratio: 0.33, brow_lip_ratio: 0.39 },
+          learn: "淡颜轮廓、低饱和眼妆、干净底妆",
+        },
+        {
+          name: "mini娜娜姐",
+          handle: "nanamini111",
+          style: "甜美亲和",
+          avatar: "https://pic.kaogujia.com/author/104081938953.jpeg?auth_key=1786678264-0-0-29f6f602e080b8df279fbe518607d197",
+          source: "https://www.douyin.com/search/nanamini111",
+          tutorial: "https://www.douyin.com/search/nanamini111%20%E5%A6%86%E5%AE%B9",
+          target: { face_length_width_ratio: 1.05, jaw_cheekbone_width_ratio: 0.86, upper_face_cheekbone_ratio: 0.98, lower_face_ratio: 0.38, eye_spacing_face_width_ratio: 0.215, eye_aspect_ratio: 2.72, nose_width_ratio: 0.23, lip_width_ratio: 0.31, brow_lip_ratio: 0.35 },
+          learn: "自然眉形、清透底妆、唇腮同色",
+        },
+        {
+          name: "佳佳来了",
+          handle: "32740673087",
+          style: "清晰上镜",
+          avatar: "https://pic.kaogujia.com/author/91703020924.jpeg?auth_key=1786678264-0-0-4520048ccd5016e87760e8e17d02a550",
+          source: "https://www.douyin.com/search/32740673087",
+          tutorial: "https://www.douyin.com/search/32740673087%20%E7%9C%BC%E5%A6%86",
+          target: { face_length_width_ratio: 1.16, jaw_cheekbone_width_ratio: 0.88, upper_face_cheekbone_ratio: 0.97, lower_face_ratio: 0.36, eye_spacing_face_width_ratio: 0.26, eye_aspect_ratio: 3.12, nose_width_ratio: 0.25, lip_width_ratio: 0.32, brow_lip_ratio: 0.43 },
+          learn: "眼尾延展、卧蚕亮点、柔和修容",
+        },
+        {
+          name: "上海·蜜桃",
+          handle: "36166188823",
+          style: "明艳精致",
+          avatar: "https://pic.kaogujia.com/author/2089517814651517.jpeg?auth_key=1786678263-0-0-9f9324b0805eb853aa97f9e2805b8e42",
+          source: "https://www.douyin.com/search/36166188823",
+          tutorial: "https://www.douyin.com/search/36166188823%20%E5%A6%86%E5%AE%B9",
+          target: { face_length_width_ratio: 1.20, jaw_cheekbone_width_ratio: 0.71, upper_face_cheekbone_ratio: 1.0, lower_face_ratio: 0.35, eye_spacing_face_width_ratio: 0.23, eye_aspect_ratio: 2.92, nose_width_ratio: 0.23, lip_width_ratio: 0.34, brow_lip_ratio: 0.37 },
+          learn: "眉尾延长、唇色提亮、颧骨弱化",
+        },
+        {
+          name: "岚总美肤女王",
+          handle: "820935954",
+          style: "成熟轮廓",
+          avatar: "https://pic.kaogujia.com/author/96909259922.jpeg?auth_key=1786678267-0-0-8429a7b74f5bb416cec4b21ff7adf08e",
+          source: "https://www.douyin.com/search/820935954",
+          tutorial: "https://www.douyin.com/search/820935954%20%E4%BF%AE%E5%AE%B9",
+          target: { face_length_width_ratio: 1.34, jaw_cheekbone_width_ratio: 0.78, upper_face_cheekbone_ratio: 1.02, lower_face_ratio: 0.37, eye_spacing_face_width_ratio: 0.25, eye_aspect_ratio: 2.86, nose_width_ratio: 0.24, lip_width_ratio: 0.30, brow_lip_ratio: 0.36 },
+          learn: "纵向脸修饰、面中提亮、轮廓收窄",
+        },
+        {
+          name: "biubiu佳佳",
+          handle: "1874884181",
+          style: "眼妆表达",
+          avatar: "https://pic.kaogujia.com/author/107748060179.jpeg?auth_key=1786678264-0-0-5bc0ceac878e634edf708c7db039c912",
+          source: "https://www.douyin.com/search/1874884181",
+          tutorial: "https://www.douyin.com/search/1874884181%20%E7%9C%BC%E5%A6%86",
+          target: { face_length_width_ratio: 1.14, jaw_cheekbone_width_ratio: 0.70, upper_face_cheekbone_ratio: 1.05, lower_face_ratio: 0.34, eye_spacing_face_width_ratio: 0.24, eye_aspect_ratio: 3.05, nose_width_ratio: 0.22, lip_width_ratio: 0.29, brow_lip_ratio: 0.34 },
+          learn: "眼型放大、骨相转折、轻量腮红",
+        },
+      ];
+
+      function getStoredMetrics() {
+        try {
+          const analysis = JSON.parse(sessionStorage.getItem("beauty-analysis") || "{}");
+          return analysis.metrics || fallbackMetrics;
+        } catch {
+          return fallbackMetrics;
+        }
+      }
+
+      function metricStatus(key, value) {
+        const [min, max] = metricStandards[key];
+        if (value >= min && value <= max) return "metric-good";
+        const tolerance = (max - min) * 0.75;
+        if (value >= min - tolerance && value <= max + tolerance) return "metric-mid";
+        return "metric-weak";
+      }
+
+      function inferFaceShape(metrics) {
+        const faceRatio = metrics.face_length_width_ratio;
+        const jawRatio = metrics.jaw_cheekbone_width_ratio;
+        const upperRatio = metrics.upper_face_cheekbone_ratio;
+        const lowerRatio = metrics.lower_face_ratio;
+        if (faceRatio >= 1.3) return "长形脸";
+        if (faceRatio <= 1.08 && jawRatio >= 0.82) return "短圆脸";
+        if (jawRatio <= 0.68 && upperRatio >= 1.02) return "心形脸";
+        if (jawRatio >= 0.88 && lowerRatio >= 0.4) return "方圆脸";
+        if (jawRatio <= 0.72 && faceRatio >= 1.12 && faceRatio <= 1.26) return "菱形脸";
+        if (jawRatio >= 0.86 && lowerRatio <= 0.38) return "梨形脸";
+        return "鹅蛋脸";
+      }
+
+      function inferAdvantage(metrics) {
+        if (metrics.eye_aspect_ratio >= 3 && metrics.eye_spacing_face_width_ratio >= 0.22 && metrics.eye_spacing_face_width_ratio <= 0.27) return "眼睛有辨识度";
+        if (metrics.lip_width_ratio >= 0.33) return "唇部存在感强";
+        if (metrics.nose_width_ratio <= 0.22) return "面中干净精致";
+        if (metrics.lower_face_ratio >= 0.36 && metrics.lower_face_ratio <= 0.39) return "三庭比例舒展";
+        if (metrics.jaw_cheekbone_width_ratio >= 0.74 && metrics.jaw_cheekbone_width_ratio <= 0.82) return "下颌线条清晰";
+        if (metrics.eye_spacing_face_width_ratio < 0.22 && metrics.brow_lip_ratio <= 0.36) return "幼态亲和感强";
+        if (metrics.jaw_cheekbone_width_ratio <= 0.72 && metrics.nose_width_ratio <= 0.24) return "骨相转折明确";
+        return "五官比例协调";
+      }
+
+      function inferImprovement(metrics) {
+        if (metrics.jaw_cheekbone_width_ratio <= 0.7) return "增强下庭支撑感";
+        if (metrics.lower_face_ratio >= 0.41) return "弱化下庭重量";
+        if (metrics.brow_lip_ratio >= 0.42) return "降低眉毛浓度";
+        if (metrics.face_length_width_ratio >= 1.3) return "降低纵向拉长感";
+        if (metrics.nose_width_ratio >= 0.26) return "收窄面中重心";
+        if (metrics.eye_spacing_face_width_ratio >= 0.28 || metrics.eye_aspect_ratio <= 2.65) return "增加眼妆横向延展";
+        if (metrics.lip_width_ratio <= 0.28) return "加强唇部色彩重心";
+        if (metrics.jaw_cheekbone_width_ratio <= 0.74 && metrics.lower_face_ratio <= 0.36) return "柔化颧骨转折";
+        return "增强轮廓感";
+      }
+
+      function scoreCreator(metrics, creator) {
+        const weights = {
+          face_length_width_ratio: 1.25,
+          jaw_cheekbone_width_ratio: 1.35,
+          upper_face_cheekbone_ratio: 0.9,
+          lower_face_ratio: 1.15,
+          eye_spacing_face_width_ratio: 1.2,
+          eye_aspect_ratio: 1.1,
+          nose_width_ratio: 0.75,
+          lip_width_ratio: 0.75,
+          brow_lip_ratio: 0.8,
+        };
+        let distance = 0;
+        Object.entries(weights).forEach(([key, weight]) => {
+          const range = Math.max(metricStandards[key][1] - metricStandards[key][0], 0.04);
+          distance += Math.abs(metrics[key] - creator.target[key]) / range * weight;
+        });
+        return Math.max(72, Math.min(96, Math.round(98 - distance * 2.25)));
+      }
+
+      function explainMatch(metrics, creator) {
+        const diffs = [
+          ["脸型长宽比接近，整体轮廓走向更相似。", Math.abs(metrics.face_length_width_ratio - creator.target.face_length_width_ratio)],
+          ["下颌与颧骨宽度比例接近，适合参考修容边界。", Math.abs(metrics.jaw_cheekbone_width_ratio - creator.target.jaw_cheekbone_width_ratio)],
+          ["眼距和眼型比例接近，眼妆放大方式可参考。", Math.abs(metrics.eye_spacing_face_width_ratio - creator.target.eye_spacing_face_width_ratio) + Math.abs(metrics.eye_aspect_ratio - creator.target.eye_aspect_ratio) / 10],
+          ["唇宽与眉唇比例接近，适合学习唇腮同色处理。", Math.abs(metrics.lip_width_ratio - creator.target.lip_width_ratio) + Math.abs(metrics.brow_lip_ratio - creator.target.brow_lip_ratio)],
+        ];
+        return diffs.sort((a, b) => a[1] - b[1]).slice(0, 3).map((item) => item[0]);
+      }
+
+      function rankCreators(metrics) {
+        return creators
+          .map((creator) => ({ ...creator, score: scoreCreator(metrics, creator), reasons: explainMatch(metrics, creator) }))
+          .sort((a, b) => b.score - a.score);
+      }
+
+      function renderMetricsAndReport(metrics) {
+        Object.entries(metricKeys).forEach(([key, id]) => {
+          const element = document.getElementById(id);
+          if (!element || typeof metrics[key] !== "number") return;
+          element.textContent = metrics[key].toFixed(3);
+          element.className = metricStatus(key, metrics[key]);
+        });
+        document.getElementById("faceShapeResult").textContent = inferFaceShape(metrics);
+        document.getElementById("advantageResult").textContent = inferAdvantage(metrics);
+        document.getElementById("improvementResult").textContent = inferImprovement(metrics);
+      }
+
+      function creatorLink(creator, label, className = "mr-white-button") {
+        return `<a class="${className}" href="${creator.source}" target="_blank" rel="noreferrer">${label} ↗</a>`;
+      }
+
+      function renderCreators(ranked) {
+        const top = ranked.slice(0, 3);
+        const side = document.getElementById("sideCreatorList");
+        side.innerHTML = top.map((creator) => `
+          <a href="${creator.source}" target="_blank" rel="noreferrer">
+            <img src="${creator.avatar}" alt="${creator.name}" />
+            <div><strong>${creator.name}</strong><span>${creator.style} / 抖音 ${creator.handle}</span></div>
+            <b>${creator.score}%</b>
+          </a>
+        `).join("");
+
+        const best = top[0];
+        document.getElementById("bestMatchScore").textContent = `${best.score}%`;
+        document.getElementById("bestMatchMeter").style.width = `${best.score}%`;
+        document.getElementById("bestMatchTags").innerHTML = best.reasons.map((reason) => `<span>${reason.replace("，", "")}</span>`).join("");
+
+        document.getElementById("featuredCreator").innerHTML = `
+          <a
+            class="mr-creator-photo primary real-avatar"
+            href="${best.source}"
+            target="_blank"
+            rel="noreferrer"
+            style="background-image: linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.16)), url('${best.avatar}')"
+          ><span>最接近</span></a>
+          <div class="mr-creator-info">
+            <p>首选参照</p>
+            <h3>${best.name}</h3>
+            <input value="抖音 ${best.handle}" readonly />
+            <p class="mr-creator-copy">适合优先参考她的${best.learn}。不是照搬长相，而是学习相近比例下的妆容处理方式。</p>
+            <ul>${best.reasons.map((reason) => `<li>${reason}</li>`).join("")}</ul>
+            ${creatorLink(best, "抖音主页")}
+          </div>
+        `;
+
+        document.getElementById("moreCreatorGrid").innerHTML = ranked.slice(1, 3).map((creator, index) => `
+          <article class="mr-more-card">
+            <a
+              class="mr-creator-photo ${index === 0 ? "second" : "third"} real-avatar"
+              href="${creator.source}"
+              target="_blank"
+              rel="noreferrer"
+              style="background-image: linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.16)), url('${creator.avatar}')"
+            ><span>第 ${index + 2} 名</span></a>
+            <div class="mr-more-body">
+              <h3>${creator.name}</h3>
+              <input value="抖音 ${creator.handle}" readonly />
+              <p>${creator.reasons[0]}</p>
+              <p>学习重点：${creator.learn}。</p>
+              <div class="mr-more-actions">
+                <a href="${creator.tutorial}" target="_blank" rel="noreferrer">代表教程 ↗</a>
+                <a href="${creator.source}" target="_blank" rel="noreferrer">抖音主页 ↗</a>
+              </div>
+            </div>
+          </article>
+        `).join("");
+      }
+
+      async function copyResultUrl() {
+        const button = document.getElementById("sharePkButton");
+        const note = document.getElementById("sharePkNote");
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          button.textContent = "已复制，发给闺蜜";
+          note.textContent = "网址已复制，可以直接粘贴发送。";
+          window.setTimeout(() => {
+            button.textContent = "邀请闺蜜审美PK";
+            note.textContent = "复制当前分析网址，发给闺蜜一起看。";
+          }, 1800);
+        } catch {
+          note.textContent = "复制失败，请手动复制浏览器地址栏网址。";
+        }
+      }
+
+      const metrics = getStoredMetrics();
+      const image = sessionStorage.getItem("beauty-preview-image");
+      const name = sessionStorage.getItem("beauty-preview-name");
+      const resultPhoto = document.getElementById("resultPhoto");
+      const resultFileName = document.getElementById("resultFileName");
+
+      document.getElementById("sharePkButton").addEventListener("click", copyResultUrl);
+      if (image) {
+        resultPhoto.style.backgroundImage = `linear-gradient(rgba(34,34,34,.96), rgba(34,34,34,.96)), url(${image})`;
+        resultPhoto.classList.add("has-upload");
+      }
+      if (name) resultFileName.textContent = name;
+      const count = localStorage.getItem("beauty-test-count") || "13827";
+      document.getElementById("testerCount").textContent = `你是第 ${count} 位完成测试的女生`;
+      renderMetricsAndReport(metrics);
+      renderCreators(rankCreators(metrics));
+    </script>
+  </body>
+</html>

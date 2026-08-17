@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>申请已提交 - MAKE UP Reference</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="mr-header compact">
+      <a class="mr-brand" href="/"><strong>MAKE UP</strong><span>MAKEUP<br />REFERENCE</span></a>
+      <nav><a href="/plus">Plus</a><a class="active" href="/blogger">博主入驻</a><a href="/privacy">隐私</a></nav>
+    </header>
+    <main class="mr-page mr-submit-result">
+      <p class="mr-meta">CREATOR / 审核提交</p>
+      <h1>入驻申请已收到</h1>
+      <p id="submitSummary">我们已经把你的资料放入申请箱，后续会在后台进行身份核验、内容方向和照片质量审核。</p>
+      <div class="mr-submit-actions">
+        <a class="mr-black-button" href="/creator-admin">查看申请后台</a>
+        <a class="mr-white-button" href="/blogger">继续提交</a>
+      </div>
+    </main>
+    <script>
+      try {
+        const item = JSON.parse(sessionStorage.getItem("beauty-last-creator-application") || "{}");
+        if (item.name) {
+          document.getElementById("submitSummary").textContent = `${item.name} 的入驻资料已进入申请箱，状态为“待审核”。`;
+        }
+      } catch {}
+    </script>
+  </body>
+</html>

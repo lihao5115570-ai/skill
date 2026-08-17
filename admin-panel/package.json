@@ -1,0 +1,9 @@
+{
+  "name": "beauty-ai-admin-panel",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"Admin panel scaffold is ready. Add a Next.js app here when admin UI work begins.\"",
+    "build": "echo \"No admin build configured yet.\"",
+    "lint": "echo \"No admin lint configured yet.\""
+  }
+}

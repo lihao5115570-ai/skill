@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plus 账号 - MAKE UP Reference</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="mr-header compact">
+      <a class="mr-brand" href="/"><strong>MAKE UP</strong><span>PLUS ACCOUNT</span></a>
+      <nav><a href="/plus">Plus</a><a href="/result">报告</a></nav>
+    </header>
+    <main class="mr-page mr-submit-result">
+      <p class="mr-meta">ACCOUNT / Plus</p>
+      <h1>账号已登录</h1>
+      <p id="accountText">你已经完成邮箱确认。正式版这里会显示邀请码兑换、会员有效期和剩余报告次数。</p>
+      <div class="mr-submit-actions">
+        <a class="mr-black-button" href="/result">查看报告</a>
+        <a class="mr-white-button" href="/plus">返回 Plus</a>
+      </div>
+    </main>
+    <script>
+      try {
+        const user = JSON.parse(localStorage.getItem("beauty-plus-current-user") || "{}");
+        if (user.email) document.getElementById("accountText").textContent = `${user.email} 已登录。下一步可兑换邀请码或查看 Plus 报告额度。`;
+      } catch {}
+    </script>
+  </body>
+</html>

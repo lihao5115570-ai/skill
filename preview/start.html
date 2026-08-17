@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>上传照片 - MAKE UP Reference</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="mr-header compact">
+      <a class="mr-brand" href="/">
+        <strong>MAKE UP</strong>
+        <span>MAKEUP<br />REFERENCE</span>
+      </a>
+      <nav>
+        <a href="/plus">Plus</a>
+        <a href="/blogger">博主入驻</a>
+        <a href="/privacy">隐私</a>
+      </nav>
+    </header>
+
+    <main class="mr-page">
+      <section class="mr-page-title mr-start-title">
+        <p class="mr-meta">START / 照片分析</p>
+        <h1>上传一张清晰的正面照片</h1>
+        <p>照片将占据分析主视窗。识别完成后，面部关键点和个人比例会显示在右侧。</p>
+      </section>
+
+      <section class="mr-upload-stage">
+        <aside class="mr-upload-side">
+          <p class="mr-meta">UPLOAD RULES</p>
+          <h2>让照片更适合分析</h2>
+          <ul>
+            <li><strong>01</strong><span>正脸看镜头，保留完整五官。</span></li>
+            <li><strong>02</strong><span>避免帽子、口罩、刘海遮挡。</span></li>
+            <li><strong>03</strong><span>自然光或均匀室内光更稳定。</span></li>
+          </ul>
+        </aside>
+
+        <section class="mr-upload-box">
+          <div class="mr-upload-center">
+            <div class="mr-image-icon" id="uploadIcon">⌗</div>
+            <div class="mr-preview-frame" id="previewFrame" hidden>
+              <img id="previewImage" alt="已选择的照片预览" />
+            </div>
+
+            <div class="mr-upload-actions">
+              <button class="mr-black-button" id="selectPhotoButton" type="button">选择照片</button>
+              <input id="photoInput" class="mr-hidden-file" type="file" accept="image/*" />
+              <button class="mr-white-button" type="button" id="cameraButton">拍照</button>
+            </div>
+
+            <div class="mr-tips">
+              <span>正面拍摄</span>
+              <span>无遮挡</span>
+              <span>光线均匀</span>
+            </div>
+
+            <p id="uploadStatus">照片仅在当前设备处理，有效分析保存在本机。</p>
+            <button class="mr-next-button" id="analyzeButton" type="button">开始分析 →</button>
+
+            <div class="mr-quota">
+              <span>还可免费成功匹配 3 次，失败不计次数</span>
+              <button type="button">邀请赚次数</button>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const input = document.getElementById("photoInput");
+      const previewFrame = document.getElementById("previewFrame");
+      const previewImage = document.getElementById("previewImage");
+      const uploadIcon = document.getElementById("uploadIcon");
+      const statusText = document.getElementById("uploadStatus");
+      const analyzeButton = document.getElementById("analyzeButton");
+      const selectPhotoButton = document.getElementById("selectPhotoButton");
+      const cameraButton = document.getElementById("cameraButton");
+
+      const metricPresets = [
+        { face_length_width_ratio: 1.34, jaw_cheekbone_width_ratio: 0.78, upper_face_cheekbone_ratio: 1.02, lower_face_ratio: 0.37, eye_spacing_face_width_ratio: 0.25, eye_aspect_ratio: 2.86, nose_width_ratio: 0.24, lip_width_ratio: 0.30, brow_lip_ratio: 0.36 },
+        { face_length_width_ratio: 1.04, jaw_cheekbone_width_ratio: 0.86, upper_face_cheekbone_ratio: 0.98, lower_face_ratio: 0.38, eye_spacing_face_width_ratio: 0.21, eye_aspect_ratio: 2.72, nose_width_ratio: 0.23, lip_width_ratio: 0.31, brow_lip_ratio: 0.35 },
+        { face_length_width_ratio: 1.18, jaw_cheekbone_width_ratio: 0.66, upper_face_cheekbone_ratio: 1.05, lower_face_ratio: 0.34, eye_spacing_face_width_ratio: 0.24, eye_aspect_ratio: 3.05, nose_width_ratio: 0.22, lip_width_ratio: 0.29, brow_lip_ratio: 0.34 },
+        { face_length_width_ratio: 1.15, jaw_cheekbone_width_ratio: 0.90, upper_face_cheekbone_ratio: 0.99, lower_face_ratio: 0.42, eye_spacing_face_width_ratio: 0.28, eye_aspect_ratio: 2.60, nose_width_ratio: 0.27, lip_width_ratio: 0.27, brow_lip_ratio: 0.39 },
+        { face_length_width_ratio: 1.20, jaw_cheekbone_width_ratio: 0.71, upper_face_cheekbone_ratio: 1.00, lower_face_ratio: 0.35, eye_spacing_face_width_ratio: 0.23, eye_aspect_ratio: 2.92, nose_width_ratio: 0.23, lip_width_ratio: 0.34, brow_lip_ratio: 0.37 },
+        { face_length_width_ratio: 1.16, jaw_cheekbone_width_ratio: 0.88, upper_face_cheekbone_ratio: 0.97, lower_face_ratio: 0.36, eye_spacing_face_width_ratio: 0.26, eye_aspect_ratio: 3.12, nose_width_ratio: 0.25, lip_width_ratio: 0.32, brow_lip_ratio: 0.43 },
+        { face_length_width_ratio: 1.19, jaw_cheekbone_width_ratio: 0.76, upper_face_cheekbone_ratio: 1.02, lower_face_ratio: 0.39, eye_spacing_face_width_ratio: 0.245, eye_aspect_ratio: 3.109, nose_width_ratio: 0.231, lip_width_ratio: 0.327, brow_lip_ratio: 0.431 },
+      ];
+
+      function hashFile(file) {
+        const text = `${file.name}-${file.size}-${file.lastModified}`;
+        let hash = 0;
+        for (let index = 0; index < text.length; index += 1) {
+          hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+        }
+        return hash;
+      }
+
+      function jitter(value, hash, index) {
+        const offset = (((hash >> (index % 16)) & 7) - 3) * 0.002;
+        return Number((value + offset).toFixed(3));
+      }
+
+      function createPreviewAnalysis(file) {
+        const hash = hashFile(file);
+        const preset = metricPresets[hash % metricPresets.length];
+        const metrics = Object.fromEntries(
+          Object.entries(preset).map(([key, value], index) => [key, jitter(value, hash, index)])
+        );
+        return {
+          face_shape: "",
+          eye_shape: "待识别",
+          skin_color: "待识别",
+          style_type: "待识别",
+          advantage: "",
+          improvement: "",
+          quality: { passed: true, message: "照片质量通过，已开始匹配相似博主。" },
+          metrics,
+        };
+      }
+
+      selectPhotoButton.addEventListener("click", () => input.click());
+      cameraButton.addEventListener("click", () => input.click());
+
+      input.addEventListener("change", () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = String(reader.result);
+          sessionStorage.setItem("beauty-preview-image", dataUrl);
+          sessionStorage.setItem("beauty-preview-name", file.name);
+          sessionStorage.setItem("beauty-analysis", JSON.stringify(createPreviewAnalysis(file)));
+          previewImage.src = dataUrl;
+          previewFrame.hidden = false;
+          uploadIcon.hidden = true;
+          statusText.textContent = `已选择 ${file.name}，点击开始分析后会生成对应面部比例。`;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      analyzeButton.addEventListener("click", () => {
+        if (!sessionStorage.getItem("beauty-preview-image")) {
+          sessionStorage.removeItem("beauty-preview-name");
+          sessionStorage.removeItem("beauty-analysis");
+        }
+        const currentCount = Number(localStorage.getItem("beauty-test-count") || "13826");
+        localStorage.setItem("beauty-test-count", String(currentCount + 1));
+        analyzeButton.textContent = "分析中...";
+        analyzeButton.disabled = true;
+        statusText.textContent = "正在分析面部比例、照片质量和相似博主，请稍候。";
+        window.setTimeout(() => {
+          window.location.href = "/result";
+        }, 650);
+      });
+    </script>
+  </body>
+</html>

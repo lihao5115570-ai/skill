@@ -1,0 +1,20 @@
+{
+  "name": "beauty-ai-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AI beauty growth platform with user app, admin panel, backend API, and AI analysis service.",
+  "workspaces": [
+    "frontend",
+    "admin-panel"
+  ],
+  "scripts": {
+    "build": "npm --workspace frontend run build",
+    "start": "npm --workspace frontend run start",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "dev:admin": "npm --workspace admin-panel run dev",
+    "build:frontend": "npm --workspace frontend run build",
+    "build:admin": "npm --workspace admin-panel run build",
+    "lint:frontend": "npm --workspace frontend run lint",
+    "lint:admin": "npm --workspace admin-panel run lint"
+  }
+}

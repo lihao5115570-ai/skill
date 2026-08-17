@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>邮箱已确认 - MAKE UP Reference</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="mr-header compact">
+      <a class="mr-brand" href="/"><strong>MAKE UP</strong><span>PLUS EARLY ACCESS</span></a>
+      <nav><a href="/plus">Plus</a><a href="/mailbox">邮件箱</a></nav>
+    </header>
+    <main class="mr-page mr-submit-result">
+      <p class="mr-meta">ACCOUNT / 激活完成</p>
+      <h1 id="confirmTitle">邮箱已确认</h1>
+      <p id="confirmText">你的 Plus 账号已激活，可以返回登录并兑换邀请码。</p>
+      <div class="mr-submit-actions">
+        <a class="mr-black-button" href="/plus">返回 Plus 登录</a>
+        <a class="mr-white-button" href="/mailbox">查看邮件箱</a>
+      </div>
+    </main>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const email = params.get("email");
+      const token = params.get("token");
+      const accounts = JSON.parse(localStorage.getItem("beauty-plus-accounts") || "[]");
+      const account = accounts.find((item) => item.email === email && item.token === token);
+      if (account) {
+        account.confirmed = true;
+        account.membership = "email_confirmed";
+        localStorage.setItem("beauty-plus-accounts", JSON.stringify(accounts));
+        document.getElementById("confirmText").textContent = `${email} 已完成邮箱确认。`;
+      } else {
+        document.getElementById("confirmTitle").textContent = "确认链接无效";
+        document.getElementById("confirmText").textContent = "请回到 Plus 页面重新发送确认邮件。";
+      }
+    </script>
+  </body>
+</html>

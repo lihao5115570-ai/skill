@@ -1,0 +1,34 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+uploads/
+storage/*
+!storage/README.md
+!storage/BLOGGER_IMPORT_README.md
+!storage/processed/
+!storage/processed/.gitkeep
+
+# Node
+node_modules/
+.pnpm-store/
+.next/
+*.tsbuildinfo
+out/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm-cache/
+
+# Local
+.DS_Store
+Thumbs.db

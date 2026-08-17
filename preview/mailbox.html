@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>预览邮件箱 - MAKE UP Reference</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="mr-header compact">
+      <a class="mr-brand" href="/"><strong>MAKE UP</strong><span>MAILBOX PREVIEW</span></a>
+      <nav><a href="/plus">Plus</a><a href="/creator-admin">申请后台</a></nav>
+    </header>
+    <main class="mr-page">
+      <section class="mr-admin-head">
+        <div>
+          <p class="mr-meta">MAIL / 本地预览邮件箱</p>
+          <h1>确认邮件</h1>
+        </div>
+        <button class="mr-white-button" id="clearMails" type="button">清空邮件</button>
+      </section>
+      <section class="mr-admin-list" id="mailList"></section>
+    </main>
+    <script>
+      const list = document.getElementById("mailList");
+
+      function render() {
+        const mails = JSON.parse(localStorage.getItem("beauty-preview-mails") || "[]");
+        if (!mails.length) {
+          list.innerHTML = `<article class="mr-admin-empty"><h2>暂无邮件</h2><p>从 Plus 页面注册账号后，确认邮件会显示在这里。</p><a class="mr-black-button" href="/plus">去注册</a></article>`;
+          return;
+        }
+        list.innerHTML = mails.map((mail) => `
+          <article class="mr-mail-card">
+            <p class="mr-meta">${mail.createdAt} / TO ${mail.to}</p>
+            <h2>${mail.subject}</h2>
+            <p>${mail.body}</p>
+            <a class="mr-black-button" href="/confirm-email?token=${mail.token}&email=${encodeURIComponent(mail.to)}">确认邮箱</a>
+          </article>
+        `).join("");
+      }
+
+      document.getElementById("clearMails").addEventListener("click", () => {
+        localStorage.removeItem("beauty-preview-mails");
+        render();
+      });
+      render();
+    </script>
+  </body>
+</html>

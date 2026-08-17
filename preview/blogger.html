@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>博主入驻 - MAKE UP Reference</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="mr-header compact">
+      <a class="mr-brand" href="/"><strong>MAKE UP</strong><span>MAKEUP<br />REFERENCE</span></a>
+      <nav><a href="/plus">Plus</a><a class="active" href="/blogger">博主入驻</a><a href="/privacy">隐私</a></nav>
+    </header>
+
+    <main class="mr-page">
+      <section class="mr-creator-apply">
+        <div>
+          <p class="mr-meta">CREATOR / 博主入驻</p>
+          <h1>成为形象参考的一部分</h1>
+          <p>如果你愿意让自己的公开视频、发型或形象内容被更多相似面部结构的用户找到，可以提交资料申请加入公开博主库。</p>
+        </div>
+        <button class="mr-apply-button" id="openApply" type="button">＋ 提交入驻申请</button>
+      </section>
+    </main>
+
+    <section class="mr-modal-backdrop" id="applyModal" aria-hidden="true">
+      <form class="mr-apply-modal" id="applyForm">
+        <div class="mr-modal-head">
+          <div>
+            <p>博主入驻申请</p>
+            <h2>申请加入公开博主库</h2>
+          </div>
+          <button type="button" id="closeApply" aria-label="关闭">×</button>
+        </div>
+
+        <div class="mr-apply-grid">
+          <div class="mr-apply-photo">
+            <label class="mr-apply-photo-box" for="creatorPhoto">
+              <img id="creatorPreview" alt="" hidden />
+              <span id="creatorPhotoIcon">▧＋</span>
+            </label>
+            <input class="mr-hidden-file" id="creatorPhoto" type="file" accept="image/png,image/jpeg,image/webp" />
+            <label class="mr-white-button" for="creatorPhoto">上传本人正脸照</label>
+            <p>JPG、PNG 或 WebP，最大 5 MB。请使用正面、无遮挡、光线均匀的照片。</p>
+          </div>
+
+          <div class="mr-apply-fields">
+            <label>
+              <span>加入哪个参考页面</span>
+              <div class="mr-segment">
+                <input id="femaleRef" type="radio" name="referenceType" value="女生妆容" checked />
+                <label for="femaleRef">女生妆容</label>
+                <input id="maleRef" type="radio" name="referenceType" value="男生形象参考" />
+                <label for="maleRef">男生形象参考</label>
+              </div>
+            </label>
+
+            <label>
+              <span>主平台</span>
+              <div class="mr-segment">
+                <input id="douyinPlatform" type="radio" name="platform" value="抖音" checked />
+                <label for="douyinPlatform">抖音</label>
+                <input id="redPlatform" type="radio" name="platform" value="小红书" />
+                <label for="redPlatform">小红书</label>
+              </div>
+            </label>
+
+            <label><span>博主名称</span><input id="creatorName" name="creatorName" required /></label>
+            <label><span>联系邮箱</span><input id="creatorEmail" name="creatorEmail" type="email" required placeholder="仅用于身份核验，不会公开" /></label>
+            <label><span>主页链接</span><input id="creatorHome" name="creatorHome" required placeholder="https://www.douyin.com/user/..." /></label>
+            <label><span>代表教程 <em>选填</em></span><input id="creatorTutorial" name="creatorTutorial" placeholder="https://www.douyin.com/video/..." /></label>
+
+            <label class="mr-apply-check">
+              <input id="creatorAgree" type="checkbox" required />
+              <span>我确认本人为该主页博主或已获得明确授权，并同意将此照片、提取的面部特征和所选内容方向用于公开相似匹配。</span>
+            </label>
+            <p class="mr-apply-small">提交后会进入本地申请箱。正式上线后这里会写入后台数据库，并通过邮件或管理后台通知你。</p>
+          </div>
+        </div>
+
+        <div class="mr-modal-actions">
+          <button class="mr-white-button" id="cancelApply" type="button">取消</button>
+          <button class="mr-black-button" type="submit">提交审核</button>
+        </div>
+      </form>
+    </section>
+
+    <script>
+      const modal = document.getElementById("applyModal");
+      const openApply = document.getElementById("openApply");
+      const closeApply = document.getElementById("closeApply");
+      const cancelApply = document.getElementById("cancelApply");
+      const photoInput = document.getElementById("creatorPhoto");
+      const creatorPreview = document.getElementById("creatorPreview");
+      const creatorPhotoIcon = document.getElementById("creatorPhotoIcon");
+      const form = document.getElementById("applyForm");
+      let photoData = "";
+
+      function showModal() {
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+      }
+
+      function hideModal() {
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+      }
+
+      openApply.addEventListener("click", showModal);
+      closeApply.addEventListener("click", hideModal);
+      cancelApply.addEventListener("click", hideModal);
+      modal.addEventListener("click", (event) => {
+        if (event.target === modal) hideModal();
+      });
+
+      photoInput.addEventListener("change", () => {
+        const file = photoInput.files && photoInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          photoData = String(reader.result);
+          creatorPreview.src = photoData;
+          creatorPreview.hidden = false;
+          creatorPhotoIcon.hidden = true;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const application = {
+          id: `creator-${Date.now()}`,
+          status: "待审核",
+          createdAt: new Date().toLocaleString("zh-CN"),
+          referenceType: new FormData(form).get("referenceType"),
+          platform: new FormData(form).get("platform"),
+          name: document.getElementById("creatorName").value.trim(),
+          email: document.getElementById("creatorEmail").value.trim(),
+          homeUrl: document.getElementById("creatorHome").value.trim(),
+          tutorialUrl: document.getElementById("creatorTutorial").value.trim(),
+          photo: photoData,
+        };
+        const applications = JSON.parse(localStorage.getItem("beauty-creator-applications") || "[]");
+        applications.unshift(application);
+        localStorage.setItem("beauty-creator-applications", JSON.stringify(applications));
+        sessionStorage.setItem("beauty-last-creator-application", JSON.stringify(application));
+        window.location.href = "/blogger-success";
+      });
+    </script>
+  </body>
+</html>
