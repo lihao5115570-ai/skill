@@ -2,19 +2,19 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statS
 import { join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
-const frontendOut = resolve(root, "frontend", "out");
+const previewSource = resolve(root, "preview");
 const dist = resolve(root, "dist");
 const publicDir = resolve(dist, "public");
 const serverDir = resolve(dist, "server");
 
-if (!existsSync(frontendOut)) {
-  throw new Error("frontend/out was not generated. Run the frontend build before preparing Sites output.");
+if (!existsSync(previewSource)) {
+  throw new Error("preview directory was not found. The Sites build expects the approved static preview.");
 }
 
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(publicDir, { recursive: true });
 mkdirSync(serverDir, { recursive: true });
-cpSync(frontendOut, publicDir, { recursive: true });
+cpSync(previewSource, publicDir, { recursive: true });
 cpSync(resolve(root, ".openai"), resolve(dist, ".openai"), { recursive: true });
 
 function collectHtmlRoutes(dir, baseDir = dir) {
