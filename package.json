@@ -8,7 +8,7 @@
     "admin-panel"
   ],
   "scripts": {
-    "build": "npm --workspace frontend run build",
+    "build": "npm --workspace frontend run build && node scripts/prepare-sites-build.mjs",
     "start": "npm --workspace frontend run start",
     "dev:frontend": "npm --workspace frontend run dev",
     "dev:admin": "npm --workspace admin-panel run dev",
