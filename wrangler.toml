@@ -1,0 +1,7 @@
+name = "bianmei-ai"
+compatibility_date = "2026-08-24"
+pages_build_output_dir = "dist"
+
+[vars]
+AI_BASE_URL = "https://www.micuapi.ai/v1"
+AI_MODEL = "gpt-5.5"

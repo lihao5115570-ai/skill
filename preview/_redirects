@@ -1,0 +1,14 @@
+/upload /start.html 200
+/start /start.html 200
+/result /result.html 200
+/beauty-report /result.html 200
+/plus /plus.html 200
+/email-sent /email-sent.html 200
+/mailbox /mailbox.html 200
+/confirm-email /confirm-email.html 200
+/plus-account /plus-account.html 200
+/blogger /blogger.html 200
+/bloggers /blogger.html 200
+/blogger-success /blogger-success.html 200
+/creator-admin /creator-admin.html 200
+/privacy /privacy.html 200

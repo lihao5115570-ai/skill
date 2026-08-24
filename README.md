@@ -1,84 +1,160 @@
-# Beauty AI Platform
+# AI 变美测试网站
 
-MVP project skeleton for a photo-driven beauty analysis and creator-makeup transfer product.
+这是一个适合部署到 Cloudflare Pages + Pages Functions 的 AI 变美测试网站。
 
-## Project Structure
+## 部署结构
+
+- `preview/`：前端静态页面，部署到 Cloudflare Pages。
+- `functions/api/ai/analyze.js`：后端 AI 代理接口，部署为 Cloudflare Pages Functions。
+- `scripts/prepare-sites-build.mjs`：构建脚本，把 `preview/` 复制到 `dist/`。
+- `wrangler.toml`：Cloudflare Pages 项目配置。
+
+前端不会直接请求 AI 服务，也不会暴露 API Key。所有 AI 请求都走：
 
 ```text
-beauty-ai-platform/
-├── README.md
-├── docker-compose.yml
-├── .env.example
-├── package.json
-├── frontend/
-├── backend/
-├── ai-service/
-├── admin-panel/
-├── database/
-├── storage/
-├── docs/
-├── scripts/
-└── infra/
+POST /api/ai/analyze
 ```
 
-## Architecture
+Pages Function 会从 Cloudflare 环境变量读取：
 
-- `frontend`: Next.js user app for upload, analysis results, creator matching, and migration guidance.
-- `backend`: FastAPI service for APIs, analysis orchestration, and persistence.
-- `ai-service`: FastAPI service for image analysis and AI model orchestration.
-- `admin-panel`: Workspace reserved for the management console.
-- `database`: SQL schema, migrations, and seed data.
-- `storage`: Local development image storage.
-- `docs`: Product scope and development notes.
-- `scripts`: Local automation scripts.
-- `infra`: Legacy local PostgreSQL compose file kept for compatibility.
-
-## Version Roadmap
-
-- V1: 用户注册、上传照片、AI脸型分析、推荐5个博主、输出报告。
-- V2: 上传博主图片、AI分析妆容差异、生成个人方案。
-- V3: 成长记录、会员体系、商品推荐。
-
-## Local Development
-
-1. Copy environment variables:
-
-```bash
-cp .env.example .env
+```text
+AI_API_KEY
+AI_BASE_URL
+AI_MODEL
 ```
 
-2. Start the main services:
+并请求 OpenAI Chat Completions 兼容接口：
 
-```bash
-docker compose up --build
+```text
+POST {AI_BASE_URL}/chat/completions
 ```
 
-Or start only PostgreSQL with the existing infra compose file:
+## 米醋 API 配置
 
-```bash
-docker compose -f infra/docker-compose.yml up -d
+Cloudflare Pages 环境变量建议设置：
+
+```text
+AI_API_KEY=你的米醋API密钥
+AI_BASE_URL=https://www.micuapi.ai/v1
+AI_MODEL=gpt-5.5
 ```
 
-3. Start backend manually:
+不要把 `AI_API_KEY` 写入前端文件，也不要提交到 Git。
 
-```bash
-cd backend
-python -m venv .venv
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+## Cloudflare Pages 设置
+
+在 Cloudflare Pages 创建项目时填写：
+
+```text
+Framework preset: None
+Build command: npm run build
+Output directory: dist
+Root directory: /
 ```
 
-4. Start frontend manually:
+需要在 Cloudflare Pages 的 Settings → Environment variables 添加：
+
+```text
+AI_API_KEY
+AI_BASE_URL
+AI_MODEL
+```
+
+`wrangler.toml` 已经提供默认公开变量：
+
+```toml
+[vars]
+AI_BASE_URL = "https://www.micuapi.ai/v1"
+AI_MODEL = "gpt-5.5"
+```
+
+`AI_API_KEY` 必须在 Cloudflare 后台作为环境变量或 Secret 配置。
+
+## 本地构建
 
 ```bash
-cd frontend
 npm install
-npm run dev
+npm run build
 ```
 
-Default URLs:
+构建产物会生成在：
 
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:8000`
-- API docs: `http://localhost:8000/docs`
-- AI service: `http://localhost:8100/health`
+```text
+dist/
+```
+
+## 本地预览
+
+安装 Wrangler 后可本地预览 Pages Functions：
+
+```bash
+npm install
+npx wrangler pages dev dist
+```
+
+本地测试时可创建 `.dev.vars`：
+
+```text
+AI_API_KEY=你的米醋API密钥
+AI_BASE_URL=https://www.micuapi.ai/v1
+AI_MODEL=gpt-5.5
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:8788/start
+```
+
+## 接口格式
+
+请求：
+
+```http
+POST /api/ai/analyze
+Content-Type: application/json
+```
+
+支持图片、文字或两者同时提交：
+
+```json
+{
+  "image_data_url": "data:image/jpeg;base64,...",
+  "text": "我想知道适合什么妆容和博主",
+  "client_analysis": {
+    "metrics": {}
+  }
+}
+```
+
+成功响应：
+
+```json
+{
+  "ok": true,
+  "result": {
+    "face_shape": "鹅蛋脸",
+    "advantage": "五官比例协调",
+    "improvement": "增强轮廓感",
+    "metrics": {}
+  }
+}
+```
+
+失败时前端会显示明确错误，例如：
+
+- `API Key 未配置`
+- `AI接口请求失败`
+- `AI接口请求超时`
+- `AI返回格式异常`
+
+## 域名
+
+Cloudflare Pages 部署成功后，在 Pages 项目的 Custom domains 中绑定：
+
+```text
+bianmei.xyz
+www.bianmei.xyz
+```
+
+不再需要 VPS、Nginx、systemd 或 uvicorn 部署。

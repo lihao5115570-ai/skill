@@ -1751,6 +1751,38 @@ a {
   opacity: 0.72;
 }
 
+.mr-text-input-block {
+  width: min(100%, 560px);
+  margin: 16px auto 0;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mr-text-input-block span {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.mr-text-input-block textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 76px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.86);
+  outline: none;
+}
+
+.mr-text-input-block textarea:focus {
+  border-color: var(--ink);
+}
+
 .mr-photo-demo.has-upload {
   background-size: 100% 32px, contain;
   background-position: top, center;
