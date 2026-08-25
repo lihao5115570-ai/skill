@@ -1107,11 +1107,29 @@ a {
   gap: 16px;
 }
 
+.mr-top3-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .mr-more-card {
   border: 1px solid #d9d9d7;
   border-radius: 7px;
   overflow: hidden;
   background: white;
+}
+
+.mr-top3-grid .mr-creator-photo {
+  min-height: 300px;
+  background: #f6f4f0;
+}
+
+.mr-top3-grid .mr-creator-photo > img {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  object-fit: cover;
+  object-position: center 18%;
+  display: block;
 }
 
 .mr-more-body {
@@ -1790,6 +1808,14 @@ a {
   .mr-plus-banner {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .mr-top3-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mr-top3-grid .mr-creator-photo {
+    min-height: 280px;
   }
 
   .mr-home {

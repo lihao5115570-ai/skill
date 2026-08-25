@@ -109,6 +109,24 @@
         </aside>
       </section>
 
+      <section class="mr-creator-section">
+        <p class="mr-meta">MATCH / 相似匹配</p>
+        <h2>和你面部结构更接近的博主</h2>
+        <div class="mr-more-grid mr-top3-grid" id="featuredCreatorGrid"></div>
+
+        <div class="mr-plus-banner">
+          <div>
+            <p>限量付费内测</p>
+            <h3>把面部分析，变成可执行的妆造方案</h3>
+            <span>详细面容报告 · 3 套妆造方案 · 公开博主线索</span>
+          </div>
+          <div>
+            <strong>¥9.9</strong>
+            <a href="/plus">获取 Plus 报告 →</a>
+          </div>
+        </div>
+      </section>
+
     </main>
 
     <script>
@@ -837,6 +855,33 @@
         document.getElementById("bestMatchScore").textContent = `${best.score}%`;
         document.getElementById("bestMatchMeter").style.width = `${best.score}%`;
         document.getElementById("bestMatchTags").innerHTML = best.reasons.map((reason) => `<span>${reason.replace("，", "")}</span>`).join("");
+
+        const featuredGrid = document.getElementById("featuredCreatorGrid");
+        featuredGrid.innerHTML = top.map((creator, index) => `
+          <article class="mr-more-card">
+            <a
+              class="mr-creator-photo real-avatar"
+              href="${creator.source}"
+              target="_blank"
+              rel="noreferrer"
+              title="打开 ${creator.name} 的抖音主页"
+            >
+              ${creatorAvatar(creator)}
+              <span>第 ${index + 1} 名</span>
+            </a>
+            <div class="mr-more-body">
+              <h3>${creator.name}</h3>
+              <input value="抖音 ${creator.handle}" readonly />
+              <p>${creator.reasons[0]}</p>
+              <p>学习重点：${creator.learn}。</p>
+              <div class="mr-more-actions">
+                <a href="${creator.tutorial}" target="_blank" rel="noreferrer">代表教程 ↗</a>
+                <a href="${creator.source}" target="_blank" rel="noreferrer">抖音主页 ↗</a>
+              </div>
+            </div>
+          </article>
+        `).join("");
+        hydrateDouyinAvatars(featuredGrid);
       }
 
       async function copyResultUrl() {
