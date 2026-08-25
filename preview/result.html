@@ -109,29 +109,6 @@
         </aside>
       </section>
 
-      <section class="mr-creator-section">
-        <p class="mr-meta">MATCH / 相似匹配</p>
-        <h2>和你面部结构更接近的博主</h2>
-        <article class="mr-featured-creator" id="featuredCreator"></article>
-
-        <div class="mr-plus-banner">
-          <div>
-            <p>限量付费内测</p>
-            <h3>把面部分析，变成可执行的妆造方案</h3>
-            <span>详细面容报告 · 3 套妆造方案 · 公开博主线索</span>
-          </div>
-          <div>
-            <strong>¥9.9</strong>
-            <a href="/plus">获取 Plus 报告 →</a>
-          </div>
-        </div>
-      </section>
-
-      <section class="mr-more-section">
-        <p class="mr-meta">MORE / 更多参照</p>
-        <h2>也可以看看这些博主</h2>
-        <div class="mr-more-grid" id="moreCreatorGrid"></div>
-      </section>
     </main>
 
     <script>
@@ -828,11 +805,20 @@
 
       function creatorAvatar(creator) {
         const fallback = "/assets/beauty-before-after.png";
-        return `<img src="${creator.avatar || fallback}" alt="${creator.name} 抖音头像" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${fallback}'" />`;
+        const avatar = creator.avatar && !creator.avatar.includes("ui-avatars.com") ? creator.avatar : fallback;
+        return `<img src="${avatar}" alt="${creator.name} 抖音头像" loading="lazy" referrerpolicy="no-referrer" data-avatar-source="${encodeURIComponent(creator.source)}" onerror="this.onerror=null;this.src='${fallback}'" />`;
       }
 
-      function creatorLink(creator, label, className = "mr-white-button") {
-        return `<a class="${className}" href="${creator.source}" target="_blank" rel="noreferrer">${label} ↗</a>`;
+      async function hydrateDouyinAvatars(container) {
+        if (!container?.querySelectorAll) return;
+        const images = [...container.querySelectorAll("[data-avatar-source]")];
+        await Promise.allSettled(images.map(async (image) => {
+          const source = decodeURIComponent(image.dataset.avatarSource || "");
+          if (!source || !source.includes("douyin.com")) return;
+          const response = await fetch(`/api/creator-avatar?url=${encodeURIComponent(source)}`);
+          const payload = await response.json().catch(() => null);
+          if (payload?.ok && payload.avatar) image.src = payload.avatar;
+        }));
       }
 
       function renderCreators(ranked) {
@@ -845,51 +831,12 @@
             <b>${creator.score}%</b>
           </a>
         `).join("");
+        hydrateDouyinAvatars(side);
 
         const best = top[0];
         document.getElementById("bestMatchScore").textContent = `${best.score}%`;
         document.getElementById("bestMatchMeter").style.width = `${best.score}%`;
         document.getElementById("bestMatchTags").innerHTML = best.reasons.map((reason) => `<span>${reason.replace("，", "")}</span>`).join("");
-
-        document.getElementById("featuredCreator").innerHTML = `
-          <a
-            class="mr-creator-photo primary real-avatar"
-            href="${best.source}"
-            target="_blank"
-            rel="noreferrer"
-            style="background-image: linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.16)), url('${best.avatar}')"
-          ><span>最接近</span></a>
-          <div class="mr-creator-info">
-            <p>首选参照</p>
-            <h3>${best.name}</h3>
-            <input value="抖音 ${best.handle}" readonly />
-            <p class="mr-creator-copy">适合优先参考她的${best.learn}。不是照搬长相，而是学习相近比例下的妆容处理方式。</p>
-            <ul>${best.reasons.map((reason) => `<li>${reason}</li>`).join("")}</ul>
-            ${creatorLink(best, "抖音主页")}
-          </div>
-        `;
-
-        document.getElementById("moreCreatorGrid").innerHTML = ranked.slice(1, 11).map((creator, index) => `
-          <article class="mr-more-card">
-            <a
-              class="mr-creator-photo ${index === 0 ? "second" : "third"} real-avatar"
-              href="${creator.source}"
-              target="_blank"
-              rel="noreferrer"
-              style="background-image: linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.16)), url('${creator.avatar}')"
-            ><span>第 ${index + 2} 名</span></a>
-            <div class="mr-more-body">
-              <h3>${creator.name}</h3>
-              <input value="抖音 ${creator.handle}" readonly />
-              <p>${creator.reasons[0]}</p>
-              <p>学习重点：${creator.learn}。</p>
-              <div class="mr-more-actions">
-                <a href="${creator.tutorial}" target="_blank" rel="noreferrer">代表教程 ↗</a>
-                <a href="${creator.source}" target="_blank" rel="noreferrer">抖音主页 ↗</a>
-              </div>
-            </div>
-          </article>
-        `).join("");
       }
 
       async function copyResultUrl() {
