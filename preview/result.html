@@ -687,6 +687,20 @@
         return (hash % 13) - 6;
       }
 
+      const faceShapeCreatorBuckets = {
+        "短圆脸": ["小乔教化妆", "程十安an", "仇仇qiuqiu", "一颗甜椒", "周周珍可爱", "田曦薇妆容参考", "杨超越妆容参考"],
+        "方圆脸": ["程十安an", "毛戈平美妆", "老易不难", "美美教化妆", "仇仇qiuqiu", "MK凉凉", "认真少女颜九"],
+        "鹅蛋脸": ["柒柒教化妆", "Hannah教化妆", "程十安an", "MK凉凉", "大佬甜er", "白鹿妆容参考", "欧阳娜娜妆容参考"],
+        "长形脸": ["唐毅", "毛戈平美妆", "美美教化妆", "金高银妆容拆解", "张元英妆容拆解", "章小蕙妆容参考", "一枝南南"],
+        "菱形脸": ["Hannah教化妆", "Pakizat妆容教学", "扇子NO_FAN_NO_FUN", "周也妆容参考", "Jennie妆容拆解", "大佬甜er"],
+        "心形脸": ["Hannah教化妆", "Pakizat妆容教学", "小猪姐姐", "大佬甜er", "易梦玲妆容参考", "鞠婧祎妆容拆解", "Lisa妆容拆解"],
+        "梨形脸": ["柒柒教化妆", "程十安an", "毛戈平美妆", "深夜徐老师", "老易不难", "杨超越妆容参考", "金高银妆容拆解"],
+      };
+
+      function creatorBucketNames(faceShape) {
+        return new Set(faceShapeCreatorBuckets[faceShape] || []);
+      }
+
       function scoreCreator(metrics, creator) {
         const weights = {
           face_length_width_ratio: 1.25,
@@ -706,11 +720,12 @@
         });
         const faceShape = inferFaceShape(metrics);
         const focus = inferMatchFocus(metrics);
-        const faceBonus = creator.faceShapes?.includes(faceShape) ? 12 : -8;
+        const bucketBonus = creatorBucketNames(faceShape).has(creator.name) ? 18 : -14;
+        const faceBonus = creator.faceShapes?.includes(faceShape) ? 8 : -8;
         const focusBonus = focus.filter((tag) => creator.focus?.includes(tag)).length * 4;
         const teachingBonus = creator.focus?.includes("新手") ? 2 : 0;
         const offset = stableCreatorOffset(metrics, creator);
-        return Math.max(68, Math.min(98, Math.round(88 - distance * 1.35 + faceBonus + focusBonus + teachingBonus + offset)));
+        return Math.max(68, Math.min(98, Math.round(88 - distance * 1.35 + bucketBonus + faceBonus + focusBonus + teachingBonus + offset)));
       }
 
       function explainMatch(metrics, creator) {
@@ -734,9 +749,15 @@
       }
 
       function rankCreators(metrics) {
-        return creators
+        const faceShape = inferFaceShape(metrics);
+        const bucketNames = creatorBucketNames(faceShape);
+        const scored = creators
           .map((creator) => ({ ...creator, score: scoreCreator(metrics, creator), reasons: explainMatch(metrics, creator) }))
           .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "zh-Hans-CN"));
+        const bucketRanked = scored.filter((creator) => bucketNames.has(creator.name));
+        const restRanked = scored.filter((creator) => !bucketNames.has(creator.name));
+        return [...bucketRanked.slice(0, 5), ...restRanked]
+          .filter((creator, index, list) => list.findIndex((item) => item.name === creator.name) === index);
       }
 
       function renderMetricsAndReport(metrics) {
