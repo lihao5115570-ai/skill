@@ -70,9 +70,21 @@
           </div>
 
           <div class="mr-result-cards">
-            <article><p>我的脸型</p><strong id="faceShapeResult">鹅蛋脸</strong></article>
-            <article><p>我的优势</p><strong id="advantageResult">眼睛有辨识度</strong></article>
-            <article><p>提升方向</p><strong id="improvementResult">增强轮廓感</strong></article>
+            <article>
+              <p>我的脸型</p>
+              <strong id="faceShapeResult">鹅蛋脸</strong>
+              <span id="faceShapeDetail">整体比例均衡，适合参考干净、轻轮廓的妆容路线。</span>
+            </article>
+            <article>
+              <p>我的优势</p>
+              <strong id="advantageResult">眼睛有辨识度</strong>
+              <span id="advantageDetail">眼部比例会影响第一眼记忆点，适合把妆容重点放在眉眼。</span>
+            </article>
+            <article>
+              <p>提升方向</p>
+              <strong id="improvementResult">增强轮廓感</strong>
+              <span id="improvementDetail">先调整最影响比例观感的位置，再去参考相似博主的妆容。</span>
+            </article>
           </div>
 
           <div class="mr-usage-block">
@@ -663,6 +675,45 @@
         return "增强轮廓感";
       }
 
+      function inferFaceShapeDetail(metrics) {
+        const faceShape = inferFaceShape(metrics);
+        const details = {
+          "长形脸": "脸部长宽比偏高，视觉重心容易被纵向拉长。妆容上更适合横向打开眉眼和腮红面积，减少过高挑眉与过长修容。",
+          "短圆脸": "脸部纵向比例偏短、下颌与颧骨宽度接近，容易显幼态亲和。重点不是削弱可爱感，而是用眉尾、眼尾和腮红方向拉出轻成熟感。",
+          "心形脸": "上庭和颧骨存在感更强，下颌相对收窄。适合把妆容重心放在下半脸的唇腮平衡，避免上半脸过浓导致头重脚轻。",
+          "方圆脸": "下颌支撑感比较明显，轮廓清晰但容易显钝。修容要做外轮廓收窄和面中提亮，不建议照搬过甜、过圆的腮红打法。",
+          "菱形脸": "颧骨转折更明显，风格辨识度会比较强。适合学习柔化颧骨边界、把眉眼和唇部做成视觉焦点的妆容。",
+          "梨形脸": "下庭或下颌量感更突出，视觉重心容易向下。建议用上半脸提亮、眉眼拉伸和轻修容，把注意力重新拉回眉眼区。",
+          "鹅蛋脸": "整体长宽和下颌比例较均衡，适配度比较高。妆容重点可以放在风格选择：清冷、甜美、通勤或浓颜都能做，但要控制单点过重。",
+        };
+        return details[faceShape] || "整体比例会影响适合参考哪一类博主，系统会优先匹配面部结构更接近的妆容路线。";
+      }
+
+      function inferAdvantageDetail(metrics) {
+        const advantage = inferAdvantage(metrics);
+        if (advantage.includes("眼睛")) return "眼部是第一眼记忆点，适合优先学习眼影范围、卧蚕明暗和眼尾延展；不要只看博主长相，要看她怎么处理眉眼比例。";
+        if (advantage.includes("唇部")) return "唇部存在感强时，口红色号和唇形边界会直接决定风格。建议参考唇腮同色、低饱和唇泥或清透水光唇。";
+        if (advantage.includes("面中")) return "面中干净会让底妆和高光更容易出效果，适合走清透底妆路线，用少量提亮强化立体度。";
+        if (advantage.includes("三庭")) return "三庭比例舒展说明整体骨相不会太局促，妆容可以更注重氛围和质感，不需要过度堆叠修容。";
+        if (advantage.includes("下颌")) return "下颌线条清晰是轮廓优势，适合参考利落眉形、低位腮红和干净修容，强化高级感。";
+        if (advantage.includes("幼态")) return "幼态亲和感适合做低攻击性的日常妆，用自然卧蚕、柔和腮红和浅唇色放大亲近感。";
+        if (advantage.includes("骨相")) return "骨相转折明确时风格可塑性更强，适合参考风格化博主，但要控制颧骨和眉眼的浓度平衡。";
+        return "五官比例协调说明可选择路线更宽，系统会根据你最接近的比例维度推荐不同类型的博主。";
+      }
+
+      function inferImprovementDetail(metrics) {
+        const improvement = inferImprovement(metrics);
+        if (improvement.includes("下庭支撑")) return "下庭偏轻时不要只加重眼妆，可以用唇峰、唇色和下半脸腮红补支撑，让五官重心更稳定。";
+        if (improvement.includes("下庭重量")) return "下庭偏重时，重点是把视觉注意力上移：眉眼横向拉开、面中提亮，腮红位置不要压得太低。";
+        if (improvement.includes("眉毛浓度")) return "眉毛浓度过强会压住眼神，建议眉头降低存在感、眉尾更干净，颜色比发色浅半度会更柔和。";
+        if (improvement.includes("纵向拉长")) return "脸型偏长时，减少鼻影纵向长度，腮红横向铺开一点，眉形不要过挑，可以降低成熟疲惫感。";
+        if (improvement.includes("面中重心")) return "鼻翼或面中量感偏强时，底妆要干净，鼻侧阴影少量分段处理，避免一条直线让面中更重。";
+        if (improvement.includes("眼妆横向")) return "眼型或眼距需要横向延展时，眼线、睫毛和下眼影重点放在眼尾，卧蚕不要画得过短。";
+        if (improvement.includes("唇部")) return "唇部重心不足时，可用唇线和唇腮同色补存在感，色号选择比裸色多一点血色会更显精神。";
+        if (improvement.includes("颧骨")) return "颧骨转折明显时，修容边界要柔，腮红不要正压颧峰，适合从颧下向太阳穴轻扫。";
+        return "建议先从轮廓、眉眼、唇腮三个位置里选一个重点调整，不要一次把所有妆容强度都加满。";
+      }
+
       function inferMatchFocus(metrics) {
         const focus = [];
         if (metrics.face_length_width_ratio >= 1.28) focus.push("修容", "轮廓", "比例");
@@ -770,6 +821,14 @@
         document.getElementById("faceShapeResult").textContent = inferFaceShape(metrics);
         document.getElementById("advantageResult").textContent = inferAdvantage(metrics);
         document.getElementById("improvementResult").textContent = inferImprovement(metrics);
+        document.getElementById("faceShapeDetail").textContent = inferFaceShapeDetail(metrics);
+        document.getElementById("advantageDetail").textContent = inferAdvantageDetail(metrics);
+        document.getElementById("improvementDetail").textContent = inferImprovementDetail(metrics);
+      }
+
+      function creatorAvatar(creator) {
+        const fallback = "/assets/beauty-before-after.png";
+        return `<img src="${creator.avatar || fallback}" alt="${creator.name} 抖音头像" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${fallback}'" />`;
       }
 
       function creatorLink(creator, label, className = "mr-white-button") {
@@ -780,9 +839,9 @@
         const top = ranked.slice(0, 3);
         const side = document.getElementById("sideCreatorList");
         side.innerHTML = top.map((creator) => `
-          <a href="${creator.source}" target="_blank" rel="noreferrer">
-            <img src="${creator.avatar}" alt="${creator.name}" />
-            <div><strong>${creator.name}</strong><span>${creator.style} / 抖音 ${creator.handle}</span></div>
+          <a href="${creator.source}" target="_blank" rel="noreferrer" title="打开 ${creator.name} 的抖音主页">
+            <span class="mr-douyin-avatar">${creatorAvatar(creator)}<i>抖音</i></span>
+            <div><strong>${creator.name}</strong><span>${creator.style}</span><em>查看抖音主页</em></div>
             <b>${creator.score}%</b>
           </a>
         `).join("");
