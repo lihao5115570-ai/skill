@@ -827,6 +827,56 @@
         return `<img src="${avatar}" alt="${creator.name} 抖音头像" loading="lazy" referrerpolicy="no-referrer" data-avatar-source="${encodeURIComponent(creator.source)}" onerror="this.onerror=null;this.src='${fallback}'" />`;
       }
 
+      function highlightText(text) {
+        return `<strong class="mr-copy-emphasis">${text}</strong>`;
+      }
+
+      function creatorCardReason(metrics, creator, index) {
+        const faceShape = inferFaceShape(metrics);
+        const focus = inferMatchFocus(metrics);
+        const mainFocus = focus.find((tag) => creator.focus?.includes(tag)) || creator.focus?.[0] || "妆容";
+        const templates = [
+          `先看她的${highlightText("轮廓处理和妆面干净度")}。你的${faceShape}不需要照搬五官，更适合学习她把面部边界收干净、让视觉重心更清楚的方式。`,
+          `这位更适合用来校准${highlightText(`${mainFocus}方向`)}：她的妆容不是堆浓度，而是通过眉眼比例、腮红位置和唇色把气色提起来。`,
+          `重点参考她的${highlightText("风格完成度")}。如果你的照片里比例接近，但妆感容易散，可以学她把眼妆、眉毛和唇腮统一成一个风格。`,
+        ];
+        return templates[index % templates.length];
+      }
+
+      function creatorLearningPoints(metrics, creator, index) {
+        const base = String(creator.learn || "").split(/[、，,]/).map((item) => item.trim()).filter(Boolean);
+        const dynamic = [];
+        if (metrics.eye_aspect_ratio <= 2.75 || metrics.eye_spacing_face_width_ratio >= 0.275) {
+          dynamic.push("眼尾横向拉长，避免眼妆只往上堆");
+        } else {
+          dynamic.push("保留眼神干净度，眼影范围不要过重");
+        }
+        if (metrics.brow_lip_ratio >= 0.41) {
+          dynamic.push("眉毛降低存在感，让五官重心更轻");
+        } else {
+          dynamic.push("眉峰和眉尾顺着骨相走，不做生硬挑眉");
+        }
+        if (metrics.jaw_cheekbone_width_ratio >= 0.86) {
+          dynamic.push("下颌边缘用修容外收，腮红不要压太低");
+        } else {
+          dynamic.push("颧骨转折处柔化，保留面中明亮度");
+        }
+        if (metrics.lip_width_ratio <= 0.29) {
+          dynamic.push("唇色增加饱和度，把气色集中到面中");
+        } else {
+          dynamic.push("唇腮同色，避免口红和腮红各走各的");
+        }
+        const fallback = [
+          "底妆保持轻薄干净，瑕疵只局部遮盖",
+          "腮红位置跟着脸型走，不要盲目照搬模板",
+          "修容重点放在外轮廓，面中保持明亮",
+          "眉眼唇只突出一个重点，避免妆面太满",
+          "拍照时保留真实五官比例，方便下次继续比较",
+        ];
+        const minimum = index === 0 ? 6 : 5;
+        return [...new Set([...base, ...dynamic, ...fallback])].slice(0, minimum);
+      }
+
       async function hydrateDouyinAvatars(container) {
         if (!container?.querySelectorAll) return;
         const images = [...container.querySelectorAll("[data-avatar-source]")];
@@ -857,7 +907,9 @@
         document.getElementById("bestMatchTags").innerHTML = best.reasons.map((reason) => `<span>${reason.replace("，", "")}</span>`).join("");
 
         const featuredGrid = document.getElementById("featuredCreatorGrid");
-        featuredGrid.innerHTML = top.map((creator, index) => `
+        featuredGrid.innerHTML = top.map((creator, index) => {
+          const learningPoints = creatorLearningPoints(metrics, creator, index);
+          return `
           <article class="mr-more-card">
             <a
               class="mr-creator-photo real-avatar"
@@ -872,15 +924,19 @@
             <div class="mr-more-body">
               <h3>${creator.name}</h3>
               <input value="抖音 ${creator.handle}" readonly />
-              <p>${creator.reasons[0]}</p>
-              <p>学习重点：${creator.learn}。</p>
+              <p class="mr-card-reason">${creatorCardReason(metrics, creator, index)}</p>
+              <div class="mr-learning-block">
+                <span>学习重点</span>
+                <ul>${learningPoints.map((point) => `<li>${point}</li>`).join("")}</ul>
+              </div>
               <div class="mr-more-actions">
                 <a href="${creator.tutorial}" target="_blank" rel="noreferrer">代表教程 ↗</a>
                 <a href="${creator.source}" target="_blank" rel="noreferrer">抖音主页 ↗</a>
               </div>
             </div>
           </article>
-        `).join("");
+        `;
+        }).join("");
         hydrateDouyinAvatars(featuredGrid);
       }
 
