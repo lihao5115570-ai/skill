@@ -1320,8 +1320,25 @@ a {
   height: 180px;
   display: grid;
   place-items: center;
-  font-size: 104px;
-  letter-spacing: -20px;
+  padding: 14px;
+  border: 1px solid #e4e4e1;
+  border-radius: 8px;
+  background: #fbfbfa;
+}
+
+.mr-qr img {
+  width: min(100%, 168px);
+  aspect-ratio: 1;
+  object-fit: contain;
+  display: block;
+  mix-blend-mode: multiply;
+}
+
+.mr-qr span {
+  color: #586166;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
 }
 
 .mr-qr-card strong {
