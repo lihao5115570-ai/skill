@@ -2,48 +2,25 @@
 
 这是一个适合部署到 Cloudflare Pages + Pages Functions 的 AI 变美测试网站。
 
-## 部署结构
-
-- `preview/`：前端静态页面，部署到 Cloudflare Pages。
-- `functions/api/ai/analyze.js`：后端 AI 代理接口，部署为 Cloudflare Pages Functions。
-- `scripts/prepare-sites-build.mjs`：构建脚本，把 `preview/` 复制到 `dist/`。
-- `wrangler.toml`：Cloudflare Pages 项目配置。
-
-前端不会直接请求 AI 服务，也不会暴露 API Key。所有 AI 请求都走：
+前端不会直接调用 AI 或 Resend，也不会暴露 API Key。所有敏感请求都走本站后端接口：
 
 ```text
+POST /api/auth/send-code
+POST /api/auth/verify
 POST /api/ai/analyze
 ```
 
-Pages Function 会从 Cloudflare 环境变量读取：
+## 部署结构
 
-```text
-AI_API_KEY
-AI_BASE_URL
-AI_MODEL
-```
+- `preview/`：前端静态页面。
+- `functions/api/auth/send-code.js`：发送邮箱验证码。
+- `functions/api/auth/verify.js`：验证邮箱验证码。
+- `functions/api/ai/analyze.js`：AI 分析代理接口。
+- `database/d1-email-auth.sql`：Cloudflare D1 邮箱验证码表结构。
+- `scripts/prepare-sites-build.mjs`：构建脚本，把 `preview/` 复制到 `dist/`。
+- `wrangler.toml`：Cloudflare Pages 配置，已绑定 D1 数据库 `bianmei_auth`。
 
-并请求 OpenAI Chat Completions 兼容接口：
-
-```text
-POST {AI_BASE_URL}/chat/completions
-```
-
-## 米醋 API 配置
-
-Cloudflare Pages 环境变量建议设置：
-
-```text
-AI_API_KEY=你的米醋API密钥
-AI_BASE_URL=https://www.micuapi.ai/v1
-AI_MODEL=gpt-5.5
-```
-
-不要把 `AI_API_KEY` 写入前端文件，也不要提交到 Git。
-
-## Cloudflare Pages 设置
-
-在 Cloudflare Pages 创建项目时填写：
+## Cloudflare Pages 构建配置
 
 ```text
 Framework preset: None
@@ -52,23 +29,60 @@ Output directory: dist
 Root directory: /
 ```
 
-需要在 Cloudflare Pages 的 Settings → Environment variables 添加：
+## Cloudflare 环境变量
+
+进入 Cloudflare Pages 项目：
 
 ```text
-AI_API_KEY
-AI_BASE_URL
-AI_MODEL
+Settings -> Environment variables
 ```
 
-`wrangler.toml` 已经提供默认公开变量：
+添加：
+
+```text
+RESEND_API_KEY=你的 Resend API Key
+EMAIL_FROM=你的发件人，例如 MAKE UP <noreply@你的已验证域名>
+AI_API_KEY=你的米醋或 OpenAI-compatible API Key
+AI_BASE_URL=https://www.micuapi.ai/v1
+AI_MODEL=gpt-5.5
+```
+
+注意：不要把任何 API Key 写进代码或提交到 Git。
+
+## D1 数据库
+
+你的 D1 已经写入 `wrangler.toml`：
 
 ```toml
-[vars]
-AI_BASE_URL = "https://www.micuapi.ai/v1"
-AI_MODEL = "gpt-5.5"
+[[d1_databases]]
+binding = "DB"
+database_name = "bianmei_auth"
+database_id = "1f971de0-dfec-4a37-93d2-6626f26fc1bb"
 ```
 
-`AI_API_KEY` 必须在 Cloudflare 后台作为环境变量或 Secret 配置。
+因为后台提示 Bindings are managed through wrangler.toml，所以不需要在 Cloudflare 后台手动添加 D1 Binding。
+
+建表命令：
+
+```bash
+npx wrangler d1 execute bianmei_auth --file=database/d1-email-auth.sql --remote
+```
+
+执行后会创建：
+
+```text
+email_codes
+email_limits
+```
+
+## 邮箱验证码规则
+
+- 验证码为 6 位数字。
+- 验证码有效期 10 分钟。
+- 同一个邮箱 60 秒内不能重复发送。
+- 每个邮箱每天最多发送 10 次。
+- 验证码以 hash 存入 D1，不长期明文保存。
+- AI 分析前会检查该邮箱是否已经验证成功，未验证会返回 401：`请先完成邮箱验证。`
 
 ## 本地构建
 
@@ -77,84 +91,61 @@ npm install
 npm run build
 ```
 
-构建产物会生成在：
+构建产物在：
 
 ```text
 dist/
 ```
 
-## 本地预览
-
-安装 Wrangler 后可本地预览 Pages Functions：
-
-```bash
-npm install
-npx wrangler pages dev dist
-```
-
-本地测试时可创建 `.dev.vars`：
+`preview/_redirects` 会被复制到 `dist/_redirects`，保证这些前端路由可直接访问：
 
 ```text
+/start
+/upload
+/analyze
+/result
+/plus
+/blogger
+/privacy
+```
+
+## 本地预览 Functions
+
+本地调试可以创建 `.dev.vars`：
+
+```text
+RESEND_API_KEY=你的 Resend API Key
+EMAIL_FROM=MAKE UP <noreply@你的已验证域名>
 AI_API_KEY=你的米醋API密钥
 AI_BASE_URL=https://www.micuapi.ai/v1
 AI_MODEL=gpt-5.5
 ```
 
-然后打开：
+然后运行：
+
+```bash
+npm run build
+npx wrangler pages dev dist --d1 DB=bianmei_auth
+```
+
+打开：
 
 ```text
 http://127.0.0.1:8788/start
 ```
 
-## 接口格式
+## 上线流程
 
-请求：
+1. 确认 `wrangler.toml` 已包含你的 D1 数据库 ID。
+2. 在 Cloudflare Pages 里配置 `RESEND_API_KEY`、`EMAIL_FROM`、`AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL`。
+3. 运行 D1 建表命令：
 
-```http
-POST /api/ai/analyze
-Content-Type: application/json
+```bash
+npx wrangler d1 execute bianmei_auth --file=database/d1-email-auth.sql --remote
 ```
 
-支持图片、文字或两者同时提交：
+4. 推送到 GitHub main。
+5. Cloudflare Pages 会自动重新部署。
+6. 打开 `https://www.bianmei.xyz/start` 测试：发送验证码 -> 输入验证码 -> 上传照片 -> 开始分析。
 
-```json
-{
-  "image_data_url": "data:image/jpeg;base64,...",
-  "text": "我想知道适合什么妆容和博主",
-  "client_analysis": {
-    "metrics": {}
-  }
-}
-```
-
-成功响应：
-
-```json
-{
-  "ok": true,
-  "result": {
-    "face_shape": "鹅蛋脸",
-    "advantage": "五官比例协调",
-    "improvement": "增强轮廓感",
-    "metrics": {}
-  }
-}
-```
-
-失败时前端会显示明确错误，例如：
-
-- `API Key 未配置`
-- `AI接口请求失败`
-- `AI接口请求超时`
-- `AI返回格式异常`
-
-## 域名
-
-Cloudflare Pages 部署成功后，在 Pages 项目的 Custom domains 中绑定：
-
-```text
-bianmei.xyz
-www.bianmei.xyz
-```
-
-不再需要 VPS、Nginx、systemd 或 uvicorn 部署。
+不再需要 VPS、Nginx、systemd 或 uvicorn。

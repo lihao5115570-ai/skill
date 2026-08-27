@@ -445,6 +445,86 @@ a {
   font-size: 38px;
 }
 
+.mr-email-verify {
+  width: min(100%, 560px);
+  margin: 0 auto 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  text-align: left;
+}
+
+.mr-email-head {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: #6c7478;
+}
+
+.mr-email-head strong {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #f1f0ed;
+  color: #171717;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+}
+
+.mr-email-head strong.verified {
+  background: #e7f4eb;
+  color: #177044;
+}
+
+.mr-email-field {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mr-email-field input,
+.mr-code-row input {
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.mr-email-field input:focus,
+.mr-code-row input:focus {
+  border-color: #171717;
+}
+
+.mr-code-row {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.mr-code-row button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.mr-verify-status {
+  margin: 10px 0 0;
+  color: #6c7478;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .mr-upload-actions {
   display: flex;
   justify-content: center;
@@ -1256,14 +1336,18 @@ a {
 }
 
 .mr-plus-top aside {
-  border-left: 1px solid var(--line);
-  padding-left: 24px;
+  padding: 18px 20px;
+  border: 1px solid #171717;
+  border-radius: 8px;
+  background: #171717;
+  color: white;
+  box-shadow: 0 18px 40px rgba(23, 23, 23, 0.14);
 }
 
 .mr-plus-top aside span,
 .mr-plus-top aside small {
   display: block;
-  color: #586166;
+  color: rgba(255, 255, 255, 0.66);
 }
 
 .mr-plus-top aside strong {
@@ -1271,6 +1355,7 @@ a {
   margin-top: 20px;
   font-size: 40px;
   font-weight: 500;
+  color: #cfff28;
 }
 
 .mr-plus-process,
@@ -2079,6 +2164,18 @@ a {
     padding: 28px 16px;
   }
 
+  .mr-email-verify {
+    padding: 14px;
+  }
+
+  .mr-code-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mr-code-row button {
+    width: 100%;
+  }
+
   .mr-upload-side {
     order: 2;
     min-height: auto;
@@ -2176,6 +2273,10 @@ a {
 .mr-next-button:disabled {
   cursor: wait;
   opacity: 0.72;
+}
+
+.mr-next-button:disabled:not([data-loading="true"]) {
+  cursor: not-allowed;
 }
 
 .mr-text-input-block {

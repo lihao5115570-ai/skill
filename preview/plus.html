@@ -45,8 +45,8 @@
       <section class="mr-account-section">
         <div>
           <p class="mr-meta">ACCOUNT / 账号激活</p>
-          <h2>邮箱密码注册与登录</h2>
-          <p>已有账号可直接登录并兑换邀请码；没有账号时先注册并完成邮箱确认。预览版会把确认邮件放到本地邮件箱，正式版会接 Supabase/Auth 邮件服务。</p>
+          <h2>邮箱验证码激活</h2>
+          <p>先完成真实邮箱验证码验证，再继续使用 AI 测算和 Plus 兑换。验证码由 Cloudflare Functions 调用 Resend 发送，不会在前端暴露密钥。</p>
           <ul>
             <li>早期用户资格：后续 Plus 功能优先体验</li>
             <li>共 3 次报告额度：1 份正式报告 + 2 次内测重试</li>
@@ -55,15 +55,11 @@
         </div>
 
         <form class="mr-plus-form" id="plusAuthForm">
-          <div class="mr-auth-tabs">
-            <button class="active" data-mode="register" type="button">注册账号</button>
-            <button data-mode="login" type="button">登录</button>
-          </div>
           <label>邮箱<input id="plusEmail" type="email" required placeholder="name@example.com" /></label>
-          <label>密码<input id="plusPassword" type="password" required minlength="8" placeholder="至少 8 位" /></label>
-          <button type="submit" id="plusSubmit">发送确认邮件</button>
-          <p class="mr-form-status" id="plusStatus">确认邮件会发送到本地预览邮件箱。</p>
-          <a class="mr-mailbox-link" href="/mailbox">查看预览邮件箱 →</a>
+          <label>验证码<input id="plusCode" inputmode="numeric" maxlength="6" placeholder="输入 6 位验证码" /></label>
+          <button type="button" id="plusSendCode">发送验证码</button>
+          <button type="submit" id="plusSubmit">验证并继续</button>
+          <p class="mr-form-status" id="plusStatus">验证码会真实发送到你的邮箱，10 分钟内有效。</p>
         </form>
       </section>
     </main>
@@ -72,69 +68,66 @@
       const form = document.getElementById("plusAuthForm");
       const status = document.getElementById("plusStatus");
       const submit = document.getElementById("plusSubmit");
-      const tabs = Array.from(document.querySelectorAll(".mr-auth-tabs button"));
-      let mode = "register";
+      const sendCode = document.getElementById("plusSendCode");
+      const emailInput = document.getElementById("plusEmail");
+      const codeInput = document.getElementById("plusCode");
 
-      tabs.forEach((button) => {
-        button.addEventListener("click", () => {
-          mode = button.dataset.mode;
-          tabs.forEach((item) => item.classList.toggle("active", item === button));
-          submit.textContent = mode === "register" ? "发送确认邮件" : "登录";
-          status.textContent = mode === "register" ? "确认邮件会发送到本地预览邮件箱。" : "预览版会检查本地是否已有账号。";
+      async function postJson(url, body) {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         });
+        const payload = await response.json().catch(() => ({ detail: "接口返回格式异常，请稍后重试。" }));
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload.detail || payload.message || "请求失败，请稍后重试。");
+        }
+        return payload;
+      }
+
+      sendCode.addEventListener("click", async () => {
+        const email = emailInput.value.trim().toLowerCase();
+        if (!email) {
+          status.textContent = "请先填写邮箱。";
+          return;
+        }
+
+        sendCode.disabled = true;
+        status.textContent = "正在发送验证码邮件...";
+        try {
+          await postJson("/api/auth/send-code", { email });
+          status.textContent = "验证码已发送，请查看邮箱。";
+        } catch (error) {
+          status.textContent = error instanceof Error ? error.message : "验证码发送失败，请稍后重试。";
+          sendCode.disabled = false;
+          return;
+        }
+
+        setTimeout(() => {
+          sendCode.disabled = false;
+        }, 60000);
       });
 
-      form.addEventListener("submit", (event) => {
+      form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const email = document.getElementById("plusEmail").value.trim().toLowerCase();
-        const password = document.getElementById("plusPassword").value;
-        if (!email || password.length < 8) {
-          status.textContent = "请填写正确邮箱，并输入至少 8 位密码。";
+        const email = emailInput.value.trim().toLowerCase();
+        const code = codeInput.value.trim();
+        if (!email || !code) {
+          status.textContent = "请填写邮箱和验证码。";
           return;
         }
 
-        const accounts = JSON.parse(localStorage.getItem("beauty-plus-accounts") || "[]");
-        const existing = accounts.find((item) => item.email === email);
-
-        if (mode === "login") {
-          if (!existing) {
-            status.textContent = "这个邮箱还没有注册，请先注册账号。";
-            return;
-          }
-          if (!existing.confirmed) {
-            status.textContent = "邮箱还没有确认，请先到预览邮件箱点击确认链接。";
-            return;
-          }
-          localStorage.setItem("beauty-plus-current-user", JSON.stringify(existing));
+        submit.disabled = true;
+        status.textContent = "正在验证邮箱...";
+        try {
+          const payload = await postJson("/api/auth/verify", { email, code });
+          localStorage.setItem("beauty-verified-email", payload.email || email);
+          status.textContent = "邮箱验证成功，正在进入 Plus 账号页。";
           window.location.href = "/plus-account";
-          return;
+        } catch (error) {
+          status.textContent = error instanceof Error ? error.message : "验证码验证失败，请重新输入。";
+          submit.disabled = false;
         }
-
-        const token = Math.random().toString(36).slice(2, 10);
-        const account = {
-          id: existing?.id || `plus-${Date.now()}`,
-          email,
-          confirmed: false,
-          role: "plus_user",
-          membership: "pending",
-          createdAt: existing?.createdAt || new Date().toLocaleString("zh-CN"),
-          token,
-        };
-        const nextAccounts = [account, ...accounts.filter((item) => item.email !== email)];
-        localStorage.setItem("beauty-plus-accounts", JSON.stringify(nextAccounts));
-
-        const mails = JSON.parse(localStorage.getItem("beauty-preview-mails") || "[]");
-        mails.unshift({
-          id: `mail-${Date.now()}`,
-          to: email,
-          subject: "确认你的 MAKE UP Plus 邮箱",
-          createdAt: new Date().toLocaleString("zh-CN"),
-          body: `点击确认链接完成注册：http://127.0.0.1:4175/confirm-email?token=${token}&email=${encodeURIComponent(email)}`,
-          token,
-        });
-        localStorage.setItem("beauty-preview-mails", JSON.stringify(mails));
-        sessionStorage.setItem("beauty-last-email", email);
-        window.location.href = "/email-sent";
       });
     </script>
   </body>

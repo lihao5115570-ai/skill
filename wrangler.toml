@@ -2,6 +2,11 @@ name = "bianmei-ai"
 compatibility_date = "2026-08-24"
 pages_build_output_dir = "dist"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "bianmei_auth"
+database_id = "1f971de0-dfec-4a37-93d2-6626f26fc1bb"
+
 [vars]
 AI_BASE_URL = "https://www.micuapi.ai/v1"
 AI_MODEL = "gpt-5.5"

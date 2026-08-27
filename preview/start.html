@@ -44,6 +44,23 @@
               <img id="previewImage" alt="已选择的照片预览" />
             </div>
 
+            <div class="mr-email-verify" id="emailVerifyBox">
+              <div class="mr-email-head">
+                <span>EMAIL VERIFY</span>
+                <strong id="verifyBadge">未验证</strong>
+              </div>
+              <label class="mr-email-field" for="verifyEmail">
+                <span>邮箱</span>
+                <input id="verifyEmail" type="email" autocomplete="email" placeholder="name@example.com" />
+              </label>
+              <div class="mr-code-row">
+                <input id="verifyCode" inputmode="numeric" maxlength="6" placeholder="输入 6 位验证码" />
+                <button class="mr-white-button" id="sendCodeButton" type="button">发送验证码</button>
+                <button class="mr-black-button" id="verifyCodeButton" type="button">验证</button>
+              </div>
+              <p class="mr-verify-status" id="verifyStatus">完成邮箱验证后，才可以开始 AI 分析。</p>
+            </div>
+
             <div class="mr-upload-actions">
               <button class="mr-black-button" id="selectPhotoButton" type="button">选择照片</button>
               <input id="photoInput" class="mr-hidden-file" type="file" accept="image/*" />
@@ -62,7 +79,7 @@
             </div>
 
             <p id="uploadStatus">照片会提交到你的后端 AI 接口，密钥不会暴露在浏览器。</p>
-            <button class="mr-next-button" id="analyzeButton" type="button">开始分析 →</button>
+            <button class="mr-next-button" id="analyzeButton" type="button" disabled>开始分析 →</button>
 
             <div class="mr-quota">
               <span>还可免费成功匹配 3 次，失败不计次数</span>
@@ -83,6 +100,12 @@
       const selectPhotoButton = document.getElementById("selectPhotoButton");
       const cameraButton = document.getElementById("cameraButton");
       const analysisText = document.getElementById("analysisText");
+      const verifyEmail = document.getElementById("verifyEmail");
+      const verifyCode = document.getElementById("verifyCode");
+      const sendCodeButton = document.getElementById("sendCodeButton");
+      const verifyCodeButton = document.getElementById("verifyCodeButton");
+      const verifyStatus = document.getElementById("verifyStatus");
+      const verifyBadge = document.getElementById("verifyBadge");
 
       const metricPresets = [
         { face_length_width_ratio: 1.34, jaw_cheekbone_width_ratio: 0.78, upper_face_cheekbone_ratio: 1.02, lower_face_ratio: 0.37, eye_spacing_face_width_ratio: 0.25, eye_aspect_ratio: 2.86, nose_width_ratio: 0.24, lip_width_ratio: 0.30, brow_lip_ratio: 0.36 },
@@ -126,6 +149,42 @@
         };
       }
 
+      function getVerifiedEmail() {
+        return localStorage.getItem("beauty-verified-email") || "";
+      }
+
+      function canAnalyze() {
+        return Boolean(getVerifiedEmail());
+      }
+
+      function refreshVerifyState() {
+        const email = getVerifiedEmail();
+        if (email) {
+          verifyEmail.value = email;
+          verifyBadge.textContent = "已验证";
+          verifyBadge.classList.add("verified");
+          verifyStatus.textContent = `邮箱 ${email} 已验证，可以开始 AI 分析。`;
+          analyzeButton.disabled = false;
+        } else {
+          verifyBadge.textContent = "未验证";
+          verifyBadge.classList.remove("verified");
+          analyzeButton.disabled = true;
+        }
+      }
+
+      async function postJson(url, body) {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const payload = await response.json().catch(() => ({ detail: "接口返回格式异常，请稍后重试。" }));
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload.detail || payload.message || "请求失败，请稍后重试。");
+        }
+        return payload;
+      }
+
       async function requestAiAnalysis() {
         const imageDataUrl = sessionStorage.getItem("beauty-preview-image");
         const fileName = sessionStorage.getItem("beauty-preview-name") || "uploaded-face.jpg";
@@ -135,6 +194,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            email: getVerifiedEmail(),
             image_data_url: imageDataUrl,
             file_name: fileName,
             text,
@@ -154,6 +214,52 @@
       selectPhotoButton.addEventListener("click", () => input.click());
       cameraButton.addEventListener("click", () => input.click());
 
+      sendCodeButton.addEventListener("click", async () => {
+        const email = verifyEmail.value.trim().toLowerCase();
+        if (!email) {
+          verifyStatus.textContent = "请先填写邮箱。";
+          return;
+        }
+
+        sendCodeButton.disabled = true;
+        verifyStatus.textContent = "正在发送验证码邮件...";
+        try {
+          await postJson("/api/auth/send-code", { email });
+          verifyStatus.textContent = "验证码已发送，请查看邮箱，10 分钟内有效。";
+        } catch (error) {
+          verifyStatus.textContent = error instanceof Error ? error.message : "验证码发送失败，请稍后重试。";
+          sendCodeButton.disabled = false;
+          return;
+        }
+
+        setTimeout(() => {
+          sendCodeButton.disabled = false;
+        }, 60000);
+      });
+
+      verifyCodeButton.addEventListener("click", async () => {
+        const email = verifyEmail.value.trim().toLowerCase();
+        const code = verifyCode.value.trim();
+        if (!email || !code) {
+          verifyStatus.textContent = "请填写邮箱和验证码。";
+          return;
+        }
+
+        verifyCodeButton.disabled = true;
+        verifyStatus.textContent = "正在验证邮箱...";
+        try {
+          const payload = await postJson("/api/auth/verify", { email, code });
+          localStorage.setItem("beauty-verified-email", payload.email || email);
+          refreshVerifyState();
+        } catch (error) {
+          localStorage.removeItem("beauty-verified-email");
+          refreshVerifyState();
+          verifyStatus.textContent = error instanceof Error ? error.message : "验证码验证失败，请重新输入。";
+        } finally {
+          verifyCodeButton.disabled = false;
+        }
+      });
+
       input.addEventListener("change", () => {
         const file = input.files && input.files[0];
         if (!file) return;
@@ -169,7 +275,7 @@
           previewImage.src = dataUrl;
           previewFrame.hidden = false;
           uploadIcon.hidden = true;
-          analyzeButton.disabled = false;
+          analyzeButton.disabled = !canAnalyze();
           analyzeButton.textContent = "开始分析 →";
           statusText.textContent = `已选择 ${file.name}，点击开始分析后会请求 Cloudflare 后端 AI 生成报告。`;
         };
@@ -179,6 +285,12 @@
       analyzeButton.addEventListener("click", async () => {
         if (!sessionStorage.getItem("beauty-preview-image") && !analysisText.value.trim()) {
           statusText.textContent = "请先上传一张清晰的正面照片，或输入你想分析的问题。";
+          return;
+        }
+
+        if (!canAnalyze()) {
+          verifyStatus.textContent = "请先完成邮箱验证，再开始 AI 分析。";
+          statusText.textContent = "为了控制 API 成本，开始分析前需要先验证邮箱。";
           return;
         }
 
@@ -196,9 +308,15 @@
         } catch (error) {
           analyzeButton.textContent = "重新分析 →";
           analyzeButton.disabled = false;
+          if (String(error?.message || "").includes("邮箱验证")) {
+            localStorage.removeItem("beauty-verified-email");
+            refreshVerifyState();
+          }
           statusText.textContent = error instanceof Error ? error.message : "分析失败，请稍后重试。";
         }
       });
+
+      refreshVerifyState();
     </script>
   </body>
 </html>

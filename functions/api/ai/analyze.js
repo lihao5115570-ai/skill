@@ -14,6 +14,37 @@ function completionsUrl(baseUrl) {
   return `${String(baseUrl || "").replace(/\/+$/, "")}/chat/completions`;
 }
 
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function assertVerifiedEmail(env, email) {
+  if (!env.DB) {
+    return { ok: false, status: 500, detail: "D1 数据库未绑定，请在 wrangler.toml 配置 DB。" };
+  }
+
+  if (!isValidEmail(email)) {
+    return { ok: false, status: 401, detail: "请先完成邮箱验证。" };
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const verified = await env.DB.prepare(
+    "SELECT id FROM email_codes WHERE email = ? AND verified = 1 AND expires_at > ? ORDER BY created_at DESC LIMIT 1"
+  )
+    .bind(email, now)
+    .first();
+
+  if (!verified) {
+    return { ok: false, status: 401, detail: "请先完成邮箱验证。" };
+  }
+
+  return { ok: true };
+}
+
 function extractJsonObject(text) {
   const stripped = String(text || "")
     .trim()
@@ -76,6 +107,20 @@ function normalizeResult(parsed, input) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  let input;
+  try {
+    input = await request.json();
+  } catch {
+    return jsonResponse({ ok: false, detail: "请求格式异常，请提交 JSON。" }, 400);
+  }
+
+  const email = normalizeEmail(input.email || input.verified_email);
+  const emailCheck = await assertVerifiedEmail(env, email);
+  if (!emailCheck.ok) {
+    return jsonResponse({ ok: false, detail: emailCheck.detail }, emailCheck.status);
+  }
+
   const apiKey = env.AI_API_KEY;
   const baseUrl = env.AI_BASE_URL;
   const model = env.AI_MODEL;
@@ -90,13 +135,6 @@ export async function onRequestPost(context) {
     return jsonResponse({ ok: false, detail: "AI_MODEL 未配置，请在 Cloudflare Pages 环境变量设置 AI_MODEL。" }, 500);
   }
 
-  let input;
-  try {
-    input = await request.json();
-  } catch {
-    return jsonResponse({ ok: false, detail: "请求格式异常，请提交 JSON。" }, 400);
-  }
-
   const text = String(input.text || input.prompt || "").trim();
   const imageDataUrl = String(input.image_data_url || input.imageDataUrl || "").trim();
   if (!text && !imageDataUrl) {
@@ -109,7 +147,9 @@ export async function onRequestPost(context) {
     "只做风格、比例、妆容建议；不要做身份识别、颜值打分、医疗诊断或敏感属性判断。",
     text ? `用户补充：${text}` : "",
     input.client_analysis ? `前端辅助比例：${JSON.stringify(input.client_analysis)}` : "",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const content = imageDataUrl
     ? [
@@ -144,26 +184,32 @@ export async function onRequestPost(context) {
     });
   } catch (error) {
     const isTimeout = error?.name === "AbortError" || error === "timeout";
-    return jsonResponse({ ok: false, detail: isTimeout ? "AI接口请求超时，请稍后重试。" : `AI接口请求失败：${error?.message || error}` }, isTimeout ? 504 : 502);
+    return jsonResponse(
+      {
+        ok: false,
+        detail: isTimeout ? "AI 接口请求超时，请稍后重试。" : `AI 接口请求失败：${error?.message || error}`,
+      },
+      isTimeout ? 504 : 502
+    );
   } finally {
     clearTimeout(timeout);
   }
 
   if (!aiResponse.ok) {
     const detail = await aiResponse.text().catch(() => `HTTP ${aiResponse.status}`);
-    return jsonResponse({ ok: false, detail: `AI接口请求失败：${detail.slice(0, 500)}` }, 502);
+    return jsonResponse({ ok: false, detail: `AI 接口请求失败：${detail.slice(0, 500)}` }, 502);
   }
 
   let data;
   try {
     data = await aiResponse.json();
   } catch {
-    return jsonResponse({ ok: false, detail: "AI返回格式异常，无法解析 JSON。" }, 502);
+    return jsonResponse({ ok: false, detail: "AI 返回格式异常，无法解析 JSON。" }, 502);
   }
 
   const rawText = data?.choices?.[0]?.message?.content;
   if (typeof rawText !== "string" || !rawText.trim()) {
-    return jsonResponse({ ok: false, detail: "AI返回格式异常，未找到 choices[0].message.content。" }, 502);
+    return jsonResponse({ ok: false, detail: "AI 返回格式异常，未找到 choices[0].message.content。" }, 502);
   }
 
   const parsed = extractJsonObject(rawText);
