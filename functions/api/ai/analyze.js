@@ -4,10 +4,7 @@ const jsonHeaders = {
 };
 
 function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: jsonHeaders,
-  });
+  return new Response(JSON.stringify(body), { status, headers: jsonHeaders });
 }
 
 function completionsUrl(baseUrl) {
@@ -22,14 +19,13 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-async function assertVerifiedEmail(env, email) {
-  if (!env.DB) {
-    return { ok: false, status: 500, detail: "D1 数据库未绑定，请在 wrangler.toml 配置 DB。" };
-  }
+function normalizeClientId(value) {
+  const clientId = String(value || "").trim();
+  return /^[a-zA-Z0-9_-]{12,80}$/.test(clientId) ? clientId : "";
+}
 
-  if (!isValidEmail(email)) {
-    return { ok: false, status: 401, detail: "请先完成邮箱验证。" };
-  }
+async function getVerifiedEmail(env, email) {
+  if (!env.DB || !isValidEmail(email)) return false;
 
   const now = Math.floor(Date.now() / 1000);
   const verified = await env.DB.prepare(
@@ -38,11 +34,40 @@ async function assertVerifiedEmail(env, email) {
     .bind(email, now)
     .first();
 
-  if (!verified) {
-    return { ok: false, status: 401, detail: "请先完成邮箱验证。" };
+  return Boolean(verified);
+}
+
+async function getFreeQuota(env, clientId) {
+  if (!env.DB) {
+    return { ok: false, status: 500, detail: "D1 DB 未绑定" };
   }
 
-  return { ok: true };
+  if (!clientId) {
+    return { ok: false, status: 401, detail: "免费次数身份缺失，请刷新页面后重试" };
+  }
+
+  const row = await env.DB.prepare("SELECT used_count FROM free_analysis_clients WHERE client_id = ?")
+    .bind(clientId)
+    .first();
+  const used = Number(row?.used_count || 0);
+
+  if (used >= 3) {
+    return { ok: false, status: 401, detail: "免费 3 次已用完，请先完成邮箱验证" };
+  }
+
+  return { ok: true, used, remaining: 3 - used };
+}
+
+async function consumeFreeQuota(env, clientId) {
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT INTO free_analysis_clients (client_id, used_count, created_at, updated_at)
+     VALUES (?, 1, ?, ?)
+     ON CONFLICT(client_id)
+     DO UPDATE SET used_count = used_count + 1, updated_at = excluded.updated_at`
+  )
+    .bind(clientId, now, now)
+    .run();
 }
 
 function extractJsonObject(text) {
@@ -116,24 +141,25 @@ export async function onRequestPost(context) {
   }
 
   const email = normalizeEmail(input.email || input.verified_email);
-  const emailCheck = await assertVerifiedEmail(env, email);
-  if (!emailCheck.ok) {
-    return jsonResponse({ ok: false, detail: emailCheck.detail }, emailCheck.status);
+  const clientId = normalizeClientId(input.client_id || input.clientId);
+  const emailVerified = await getVerifiedEmail(env, email);
+  let shouldConsumeFreeQuota = false;
+
+  if (!emailVerified) {
+    const freeQuota = await getFreeQuota(env, clientId);
+    if (!freeQuota.ok) {
+      return jsonResponse({ ok: false, detail: freeQuota.detail }, freeQuota.status);
+    }
+    shouldConsumeFreeQuota = true;
   }
 
   const apiKey = env.AI_API_KEY;
   const baseUrl = env.AI_BASE_URL;
   const model = env.AI_MODEL;
 
-  if (!apiKey) {
-    return jsonResponse({ ok: false, detail: "API Key 未配置，请在 Cloudflare Pages 环境变量设置 AI_API_KEY。" }, 500);
-  }
-  if (!baseUrl) {
-    return jsonResponse({ ok: false, detail: "AI_BASE_URL 未配置，请在 Cloudflare Pages 环境变量设置 AI_BASE_URL。" }, 500);
-  }
-  if (!model) {
-    return jsonResponse({ ok: false, detail: "AI_MODEL 未配置，请在 Cloudflare Pages 环境变量设置 AI_MODEL。" }, 500);
-  }
+  if (!apiKey) return jsonResponse({ ok: false, detail: "API Key 未配置，请在 Cloudflare Pages 环境变量设置 AI_API_KEY。" }, 500);
+  if (!baseUrl) return jsonResponse({ ok: false, detail: "AI_BASE_URL 未配置，请在 Cloudflare Pages 环境变量设置 AI_BASE_URL。" }, 500);
+  if (!model) return jsonResponse({ ok: false, detail: "AI_MODEL 未配置，请在 Cloudflare Pages 环境变量设置 AI_MODEL。" }, 500);
 
   const text = String(input.text || input.prompt || "").trim();
   const imageDataUrl = String(input.image_data_url || input.imageDataUrl || "").trim();
@@ -210,6 +236,15 @@ export async function onRequestPost(context) {
   const rawText = data?.choices?.[0]?.message?.content;
   if (typeof rawText !== "string" || !rawText.trim()) {
     return jsonResponse({ ok: false, detail: "AI 返回格式异常，未找到 choices[0].message.content。" }, 502);
+  }
+
+  if (shouldConsumeFreeQuota) {
+    try {
+      await consumeFreeQuota(env, clientId);
+    } catch (error) {
+      console.error("free quota consume error", error);
+      return jsonResponse({ ok: false, detail: "免费次数记录失败，请稍后重试。" }, 500);
+    }
   }
 
   const parsed = extractJsonObject(rawText);

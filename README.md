@@ -73,6 +73,7 @@ npx wrangler d1 execute bianmei_auth --file=database/d1-email-auth.sql --remote
 ```text
 email_codes
 email_limits
+free_analysis_clients
 ```
 
 ## 邮箱验证码规则
@@ -82,7 +83,8 @@ email_limits
 - 同一个邮箱 60 秒内不能重复发送。
 - 每个邮箱每天最多发送 10 次。
 - 验证码以 hash 存入 D1，不长期明文保存。
-- AI 分析前会检查该邮箱是否已经验证成功，未验证会返回 401：`请先完成邮箱验证。`
+- 用户前 3 次可以免费成功匹配，不需要邮箱验证。
+- 第 4 次开始，AI 分析前会检查该邮箱是否已经验证成功，未验证会返回 401：`免费 3 次已用完，请先完成邮箱验证`。
 
 ## 本地构建
 

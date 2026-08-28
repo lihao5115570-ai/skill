@@ -1,9 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>上传照片 - MAKE UP Reference</title>
+    <title>MAKE UP Plus | 上传照片分析</title>
+        <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
@@ -171,8 +172,34 @@
         return localStorage.getItem("beauty-verified-email") || "";
       }
 
+      function getClientId() {
+        let clientId = localStorage.getItem("beauty-client-id");
+        if (!clientId) {
+          clientId = `bm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
+          localStorage.setItem("beauty-client-id", clientId);
+        }
+        return clientId;
+      }
+
+      function getFreeUsed() {
+        return Math.min(3, Number(localStorage.getItem("beauty-free-analysis-used") || "0"));
+      }
+
+      function getFreeRemaining() {
+        return Math.max(0, 3 - getFreeUsed());
+      }
+
       function canAnalyze() {
-        return Boolean(getVerifiedEmail());
+        return Boolean(getVerifiedEmail()) || getFreeRemaining() > 0;
+      }
+
+      function updateQuotaText() {
+        const quotaText = document.querySelector(".mr-quota span");
+        if (!quotaText) return;
+        const remaining = getFreeRemaining();
+        quotaText.textContent = remaining > 0
+          ? `还可免费成功匹配 ${remaining} 次，失败不计次数`
+          : "免费 3 次已用完，完成邮箱验证后继续分析";
       }
 
       function refreshVerifyState() {
@@ -186,6 +213,7 @@
           verifyBadge.textContent = "未验证";
           verifyBadge.classList.remove("verified");
         }
+        updateQuotaText();
       }
 
       async function postJson(url, body) {
@@ -211,6 +239,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: getVerifiedEmail(),
+            client_id: getClientId(),
             image_data_url: imageDataUrl,
             file_name: fileName,
             text,
@@ -305,8 +334,8 @@
         }
 
         if (!canAnalyze()) {
-          verifyStatus.textContent = "请先完成邮箱验证，再开始 AI 分析。";
-          statusText.textContent = "为了控制 API 成本，开始分析前需要先验证邮箱。";
+          verifyStatus.textContent = "免费 3 次已用完，请完成邮箱验证后继续 AI 分析。";
+          statusText.textContent = "你已经用完 3 次免费匹配，验证邮箱后可以继续分析。";
           document.querySelector(".mr-start-account")?.scrollIntoView({ behavior: "smooth", block: "center" });
           return;
         }
@@ -319,6 +348,10 @@
           const result = await requestAiAnalysis();
           const currentCount = Number(localStorage.getItem("beauty-test-count") || "13826");
           localStorage.setItem("beauty-test-count", String(currentCount + 1));
+          if (!getVerifiedEmail()) {
+            localStorage.setItem("beauty-free-analysis-used", String(getFreeUsed() + 1));
+            updateQuotaText();
+          }
           sessionStorage.setItem("beauty-analysis", JSON.stringify(result));
           statusText.textContent = "分析完成，正在生成你的美丽报告。";
           window.location.href = "/result";
@@ -337,3 +370,4 @@
     </script>
   </body>
 </html>
+

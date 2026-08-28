@@ -20,3 +20,10 @@ CREATE TABLE IF NOT EXISTS email_limits (
   send_count INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (email, date)
 );
+
+CREATE TABLE IF NOT EXISTS free_analysis_clients (
+  client_id TEXT PRIMARY KEY,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
