@@ -748,6 +748,14 @@
         return new Set(faceShapeCreatorBuckets[faceShape] || []);
       }
 
+      function isGeneratedAvatar(url) {
+        return !url || url.includes("ui-avatars.com") || url.startsWith("data:image/svg");
+      }
+
+      function hasRealCreatorImage(creator) {
+        return Boolean(creator.cover || (creator.avatar && !isGeneratedAvatar(creator.avatar)));
+      }
+
       function scoreCreator(metrics, creator) {
         const weights = {
           face_length_width_ratio: 1.25,
@@ -772,8 +780,9 @@
         const faceBonus = creator.faceShapes ? (creator.faceShapes.includes(faceShape) ? 8 : -8) : 0;
         const focusBonus = focus.filter((tag) => creator.focus?.includes(tag)).length * 4;
         const teachingBonus = creator.focus?.includes("新手") ? 2 : 0;
+        const realImageBonus = hasRealCreatorImage(creator) ? 10 : -34;
         const offset = stableCreatorOffset(metrics, creator);
-        return Math.max(68, Math.min(98, Math.round(88 - distance * 1.35 + bucketBonus + faceBonus + focusBonus + teachingBonus + offset)));
+        return Math.max(58, Math.min(98, Math.round(88 - distance * 1.35 + bucketBonus + faceBonus + focusBonus + teachingBonus + realImageBonus + offset)));
       }
 
       function explainMatch(metrics, creator) {
@@ -917,7 +926,8 @@
       }
 
       function renderCreators(ranked) {
-        const top = ranked.slice(0, 3);
+        const topWithRealImages = ranked.filter(hasRealCreatorImage).slice(0, 3);
+        const top = topWithRealImages.length >= 3 ? topWithRealImages : ranked.slice(0, 3);
         const side = document.getElementById("sideCreatorList");
         side.innerHTML = top.map((creator) => `
           <a href="${creator.source}" target="_blank" rel="noreferrer" title="打开 ${creator.name} 的抖音主页">
