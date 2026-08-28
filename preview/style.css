@@ -384,7 +384,7 @@ a {
 
 .mr-upload-stage {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 286px;
+  grid-template-columns: 240px minmax(0, 1fr);
   gap: 18px;
   align-items: stretch;
 }
@@ -1505,6 +1505,90 @@ a {
   line-height: 1.6;
 }
 
+.mr-start-account {
+  margin-top: 52px;
+  padding: 50px 0;
+  border-top: 1px solid var(--line);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+  align-items: center;
+}
+
+.mr-start-account > div {
+  max-width: 650px;
+}
+
+.mr-start-account h2 {
+  margin: 14px 0 18px;
+  font-size: clamp(28px, 3.2vw, 40px);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.mr-start-account ul {
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 14px;
+}
+
+.mr-start-account li {
+  position: relative;
+  padding-left: 28px;
+  color: #30373b;
+  font-weight: 800;
+}
+
+.mr-start-account li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 17px;
+  height: 17px;
+  border: 1px solid #171717;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.mr-start-auth-form {
+  padding: 28px 30px;
+}
+
+.mr-start-auth-form .mr-auth-tabs {
+  margin-bottom: 8px;
+}
+
+.mr-start-auth-form #sendCodeButton {
+  border: 0;
+  border-radius: 999px;
+  background: #171717;
+  color: white;
+}
+
+.mr-start-auth-form #verifyCodeButton {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: #171717;
+}
+
+.mr-start-auth-form button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.mr-verify-badge-line strong {
+  color: #171717;
+}
+
+.mr-verify-badge-line strong.verified {
+  color: #177044;
+}
+
 .mr-mailbox-link {
   color: #171717;
   font-size: 13px;
@@ -2177,26 +2261,8 @@ a {
     padding: 28px 16px;
   }
 
-  .mr-start-auth-panel {
-    order: 2;
-    min-height: auto;
-    align-items: stretch;
-  }
-
-  .mr-email-verify {
-    padding: 14px;
-  }
-
-  .mr-code-row {
-    grid-template-columns: 1fr;
-  }
-
-  .mr-code-row button {
-    width: 100%;
-  }
-
   .mr-upload-side {
-    order: 3;
+    order: 2;
     min-height: auto;
   }
 
@@ -2211,6 +2277,30 @@ a {
 
   .mr-quota button {
     display: none;
+  }
+
+  .mr-start-account {
+    margin-top: 34px;
+    padding: 32px 0;
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  .mr-start-account h2 {
+    font-size: 28px;
+  }
+
+  .mr-start-account ul {
+    margin-top: 22px;
+    gap: 12px;
+  }
+
+  .mr-start-auth-form {
+    padding: 20px 18px;
+  }
+
+  .mr-start-auth-form button {
+    width: 100%;
   }
 
   .mr-result-title > a {

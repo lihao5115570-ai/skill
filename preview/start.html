@@ -70,25 +70,32 @@
             </div>
           </div>
         </section>
+      </section>
 
-        <aside class="mr-start-auth-panel">
-          <div class="mr-email-verify" id="emailVerifyBox">
-            <div class="mr-email-head">
-              <span>EMAIL VERIFY</span>
-              <strong id="verifyBadge">未验证</strong>
-            </div>
-            <label class="mr-email-field" for="verifyEmail">
-              <span>邮箱</span>
-              <input id="verifyEmail" type="email" autocomplete="email" placeholder="name@example.com" />
-            </label>
-            <div class="mr-code-row">
-              <input id="verifyCode" inputmode="numeric" maxlength="6" placeholder="输入 6 位验证码" />
-              <button class="mr-white-button" id="sendCodeButton" type="button">发送验证码</button>
-              <button class="mr-black-button" id="verifyCodeButton" type="button">验证</button>
-            </div>
-            <p class="mr-verify-status" id="verifyStatus">完成邮箱验证后，才可以开始 AI 分析。</p>
+      <section class="mr-account-section mr-start-account">
+        <div>
+          <p class="mr-meta">ACCOUNT / 账号激活</p>
+          <h2>邮箱验证码注册与登录</h2>
+          <p>为了控制 AI 接口成本，开始分析前需要先完成邮箱验证。验证只用于本次测算授权，不会保存照片、面部比例、报告或博主匹配结果。</p>
+          <ul>
+            <li>早期用户资格：后续 Plus 功能优先体验</li>
+            <li>共 3 次报告额度：1 份正式报告 + 2 次内测重试</li>
+            <li>普通匹配不限次：Plus 有效期内不消耗本机免费次数</li>
+          </ul>
+        </div>
+
+        <form class="mr-plus-form mr-start-auth-form" id="emailVerifyBox">
+          <div class="mr-auth-tabs">
+            <button class="active" type="button">注册账号</button>
+            <button type="button">登录</button>
           </div>
-        </aside>
+          <label>邮箱<input id="verifyEmail" type="email" autocomplete="email" placeholder="name@example.com" /></label>
+          <label>验证码<input id="verifyCode" inputmode="numeric" maxlength="6" placeholder="输入 6 位验证码" /></label>
+          <button type="button" id="sendCodeButton">发送确认邮件</button>
+          <button type="button" id="verifyCodeButton">验证并启用分析</button>
+          <p class="mr-form-status" id="verifyStatus">验证码会真实发送到你的邮箱，10 分钟内有效。</p>
+          <p class="mr-form-status mr-verify-badge-line">状态：<strong id="verifyBadge">未验证</strong></p>
+        </form>
       </section>
     </main>
 
