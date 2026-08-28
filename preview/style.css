@@ -1212,17 +1212,21 @@ a {
   border-radius: 7px;
   overflow: hidden;
   background: white;
+  display: flex;
+  flex-direction: column;
 }
 
 .mr-top3-grid .mr-creator-photo {
-  min-height: 300px;
+  height: clamp(300px, 30vw, 380px);
+  min-height: 0;
+  flex: 0 0 auto;
   background: #f6f4f0;
 }
 
 .mr-top3-grid .mr-creator-photo > img {
   width: 100%;
   height: 100%;
-  min-height: inherit;
+  min-height: 0;
   object-fit: cover;
   object-position: center 18%;
   display: block;
@@ -1230,6 +1234,9 @@ a {
 
 .mr-more-body {
   padding: 18px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .mr-more-body h3 {
@@ -1302,10 +1309,11 @@ a {
 }
 
 .mr-more-actions {
-  margin-top: 18px;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
+  margin-top: auto;
+  padding-top: 18px;
 }
 
 .mr-more-actions a {
@@ -2108,6 +2116,7 @@ a {
   }
 
   .mr-top3-grid .mr-creator-photo {
+    height: 320px;
     min-height: 280px;
   }
 
