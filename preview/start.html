@@ -62,7 +62,7 @@
             </div>
 
             <p id="uploadStatus">照片会提交到你的后端 AI 接口，密钥不会暴露在浏览器。</p>
-            <button class="mr-next-button" id="analyzeButton" type="button" disabled>开始分析 →</button>
+            <button class="mr-next-button" id="analyzeButton" type="button">开始分析 →</button>
 
             <div class="mr-quota">
               <span>还可免费成功匹配 3 次，失败不计次数</span>
@@ -182,11 +182,9 @@
           verifyBadge.textContent = "已验证";
           verifyBadge.classList.add("verified");
           verifyStatus.textContent = `邮箱 ${email} 已验证，可以开始 AI 分析。`;
-          analyzeButton.disabled = false;
         } else {
           verifyBadge.textContent = "未验证";
           verifyBadge.classList.remove("verified");
-          analyzeButton.disabled = true;
         }
       }
 
@@ -293,7 +291,7 @@
           previewImage.src = dataUrl;
           previewFrame.hidden = false;
           uploadIcon.hidden = true;
-          analyzeButton.disabled = !canAnalyze();
+          analyzeButton.disabled = false;
           analyzeButton.textContent = "开始分析 →";
           statusText.textContent = `已选择 ${file.name}，点击开始分析后会请求 Cloudflare 后端 AI 生成报告。`;
         };
@@ -309,6 +307,7 @@
         if (!canAnalyze()) {
           verifyStatus.textContent = "请先完成邮箱验证，再开始 AI 分析。";
           statusText.textContent = "为了控制 API 成本，开始分析前需要先验证邮箱。";
+          document.querySelector(".mr-start-account")?.scrollIntoView({ behavior: "smooth", block: "center" });
           return;
         }
 
