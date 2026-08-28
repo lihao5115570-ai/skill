@@ -172,7 +172,8 @@
           name: "小乔教化妆",
           handle: "1247266982.",
           style: "新手化妆教学",
-          avatar: "https://p3-pc.douyinpic.com/aweme/720x720/aweme-avatar/tos-cn-avt-0015_33d8b3ff8bb3a8ccf6894d603892bfcb.jpeg?from=2956013662",
+          avatar: "/assets/bloggers/xiao-qiao.jpg",
+          cover: "/assets/bloggers/xiao-qiao.jpg",
           source: "https://www.douyin.com/search/1247266982.",
           tutorial: "https://www.douyin.com/search/%E5%B0%8F%E4%B9%94%E6%95%99%E5%8C%96%E5%A6%86%20%E6%95%99%E7%A8%8B",
           faceShapes: ["短圆脸", "方圆脸", "鹅蛋脸"],
@@ -196,7 +197,8 @@
           name: "美美教化妆",
           handle: "shuanglintwins",
           style: "完整流程教学",
-          avatar: "https://pic.kaogujia.com/author/3887474738476830.jpeg?auth_key=1786688974-0-0-011e9283f773cd04816e676c26bc5613",
+          avatar: "/assets/bloggers/makeup-tutorial-cover.jpg",
+          cover: "/assets/bloggers/makeup-tutorial-cover.jpg",
           source: "https://www.douyin.com/search/shuanglintwins",
           tutorial: "https://www.douyin.com/search/%E7%BE%8E%E7%BE%8E%E6%95%99%E5%8C%96%E5%A6%86%20%E4%BB%A3%E8%A1%A8%E6%95%99%E7%A8%8B",
           faceShapes: ["鹅蛋脸", "长形脸", "方圆脸"],
@@ -232,7 +234,8 @@
           name: "程十安an",
           handle: "程十安an",
           style: "普通人变美思路",
-          avatar: "https://ui-avatars.com/api/?name=%E7%A8%8B%E5%8D%81%E5%AE%89&background=111111&color=ffffff&size=512",
+          avatar: "/assets/bloggers/cheng-shian.jpg",
+          cover: "/assets/bloggers/cheng-shian-video.jpg",
           source: "https://www.douyin.com/user/MS4wLjABAAAAbxmiV504fzKsys2Fw9qzn2iJWJyzxVbk1mDzAnurQV8",
           tutorial: "https://www.douyin.com/search/%E7%A8%8B%E5%8D%81%E5%AE%89an%20%E5%8C%96%E5%A6%86%E6%95%99%E7%A8%8B",
           faceShapes: ["方圆脸", "短圆脸", "鹅蛋脸", "梨形脸"],
@@ -352,7 +355,8 @@
           name: "大佬甜er",
           handle: "大佬甜er",
           style: "上镜甜酷妆",
-          avatar: "https://ui-avatars.com/api/?name=%E7%94%9Cer&background=f0c0ca&color=111111&size=512",
+          avatar: "/assets/bloggers/dalaotian.jpg",
+          cover: "/assets/bloggers/dalaotian.jpg",
           source: "https://www.douyin.com/search/%E5%A4%A7%E4%BD%AC%E7%94%9Cer%20%E7%BE%8E%E5%A6%86",
           tutorial: "https://www.douyin.com/search/%E5%A4%A7%E4%BD%AC%E7%94%9Cer%20%E5%A6%86%E5%AE%B9",
           faceShapes: ["鹅蛋脸", "心形脸", "菱形脸"],
@@ -496,7 +500,8 @@
           name: "白鹿妆容参考",
           handle: "白鹿",
           style: "明艳通勤妆",
-          avatar: "https://ui-avatars.com/api/?name=%E7%99%BD%E9%B9%BF&background=efe6dc&color=111111&size=512",
+          avatar: "/assets/bloggers/bailu.jpg",
+          cover: "/assets/bloggers/bailu.jpg",
           source: "https://www.douyin.com/search/%E7%99%BD%E9%B9%BF%20%E5%A6%86%E5%AE%B9",
           tutorial: "https://www.douyin.com/search/%E7%99%BD%E9%B9%BF%20%E9%80%9A%E5%8B%A4%E5%A6%86",
           faceShapes: ["鹅蛋脸", "长形脸", "方圆脸"],
@@ -748,12 +753,16 @@
         return new Set(faceShapeCreatorBuckets[faceShape] || []);
       }
 
+      function isStableLocalCreatorImage(url) {
+        return String(url || "").startsWith("/assets/bloggers/");
+      }
+
       function isGeneratedAvatar(url) {
         return !url || url.includes("ui-avatars.com") || url.startsWith("data:image/svg");
       }
 
       function hasRealCreatorImage(creator) {
-        return Boolean(creator.cover || (creator.avatar && !isGeneratedAvatar(creator.avatar)));
+        return isStableLocalCreatorImage(creator.cover) || isStableLocalCreatorImage(creator.avatar);
       }
 
       function scoreCreator(metrics, creator) {
