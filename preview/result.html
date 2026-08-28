@@ -822,10 +822,34 @@
         document.getElementById("improvementDetail").textContent = inferImprovementDetail(metrics);
       }
 
+      function escapeAttr(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function fallbackAvatar(name) {
+        const label = [...String(name || "妆容")]
+          .filter((char) => !/[\s._·-]/.test(char))
+          .slice(0, 2)
+          .join("") || "妆";
+        const svg = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+            <rect width="512" height="512" rx="256" fill="#171717"/>
+            <circle cx="256" cy="214" r="104" fill="#f1d4cb"/>
+            <path d="M92 512c24-104 91-156 164-156s140 52 164 156" fill="#f7f3ef"/>
+            <text x="256" y="286" text-anchor="middle" font-family="Arial, sans-serif" font-size="84" font-weight="800" fill="#171717">${label}</text>
+          </svg>
+        `;
+        return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+      }
+
       function creatorAvatar(creator) {
-        const fallback = "/assets/beauty-before-after.png";
-        const avatar = creator.avatar && !creator.avatar.includes("ui-avatars.com") ? creator.avatar : fallback;
-        return `<img src="${avatar}" alt="${creator.name} 抖音头像" loading="lazy" referrerpolicy="no-referrer" data-avatar-source="${encodeURIComponent(creator.source)}" onerror="this.onerror=null;this.src='${fallback}'" />`;
+        const fallback = fallbackAvatar(creator.name);
+        const avatar = creator.avatar || fallback;
+        return `<img src="${escapeAttr(avatar)}" alt="${escapeAttr(creator.name)} 抖音头像" loading="lazy" referrerpolicy="no-referrer" data-avatar-source="${encodeURIComponent(creator.source)}" onerror="this.onerror=null;this.src='${fallback}'" />`;
       }
 
       function highlightText(text) {

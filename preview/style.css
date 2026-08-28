@@ -1055,26 +1055,32 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.16));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(23, 23, 23, 0.08)),
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.42), transparent 30%);
   pointer-events: none;
 }
 
-.mr-creator-photo.primary.real-avatar {
-  background-image:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.16)),
-    url("https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?auto=format&fit=crop&w=1200&q=82");
+.mr-creator-photo.real-avatar {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 34px;
+  background:
+    linear-gradient(135deg, #f6f4ef 0%, #ece7dc 42%, #f2d1d4 43%, #f2d1d4 66%, #cfe3e6 67%, #dfecef 100%);
 }
 
-.mr-creator-photo.second.real-avatar {
-  background-image:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.16)),
-    url("https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=82");
-}
-
-.mr-creator-photo.third.real-avatar {
-  background-image:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.16)),
-    url("https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&w=1000&q=82");
+.mr-creator-photo.real-avatar img {
+  position: relative;
+  z-index: 1;
+  width: min(58%, 178px);
+  aspect-ratio: 1;
+  height: auto;
+  border: 8px solid rgba(255, 255, 255, 0.86);
+  border-radius: 999px;
+  object-fit: cover;
+  background: #ececea;
+  box-shadow: 0 24px 70px rgba(23, 23, 23, 0.24);
 }
 
 .mr-creator-photo.second {
@@ -1213,15 +1219,16 @@ a {
 
 .mr-top3-grid .mr-creator-photo {
   min-height: 300px;
-  background: #f6f4f0;
+  background:
+    linear-gradient(135deg, #f6f4ef 0%, #ece7dc 42%, #f2d1d4 43%, #f2d1d4 66%, #cfe3e6 67%, #dfecef 100%);
 }
 
 .mr-top3-grid .mr-creator-photo > img {
-  width: 100%;
-  height: 100%;
-  min-height: inherit;
+  width: min(58%, 168px);
+  height: auto;
+  min-height: 0;
   object-fit: cover;
-  object-position: center 18%;
+  object-position: center;
   display: block;
 }
 
