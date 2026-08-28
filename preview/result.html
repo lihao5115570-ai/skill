@@ -767,8 +767,9 @@
         });
         const faceShape = inferFaceShape(metrics);
         const focus = inferMatchFocus(metrics);
-        const bucketBonus = creatorBucketNames(faceShape).has(creator.name) ? 18 : -14;
-        const faceBonus = creator.faceShapes?.includes(faceShape) ? 8 : -8;
+        const inFaceShapeBucket = creatorBucketNames(faceShape).has(creator.name);
+        const bucketBonus = inFaceShapeBucket ? 18 : creator.faceShapes ? -8 : 0;
+        const faceBonus = creator.faceShapes ? (creator.faceShapes.includes(faceShape) ? 8 : -8) : 0;
         const focusBonus = focus.filter((tag) => creator.focus?.includes(tag)).length * 4;
         const teachingBonus = creator.focus?.includes("新手") ? 2 : 0;
         const offset = stableCreatorOffset(metrics, creator);
@@ -796,15 +797,10 @@
       }
 
       function rankCreators(metrics) {
-        const faceShape = inferFaceShape(metrics);
-        const bucketNames = creatorBucketNames(faceShape);
-        const scored = creators
+        const scored = [...creators, ...legacyCreators]
           .map((creator) => ({ ...creator, score: scoreCreator(metrics, creator), reasons: explainMatch(metrics, creator) }))
           .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "zh-Hans-CN"));
-        const bucketRanked = scored.filter((creator) => bucketNames.has(creator.name));
-        const restRanked = scored.filter((creator) => !bucketNames.has(creator.name));
-        return [...bucketRanked.slice(0, 5), ...restRanked]
-          .filter((creator, index, list) => list.findIndex((item) => item.name === creator.name) === index);
+        return scored.filter((creator, index, list) => list.findIndex((item) => item.name === creator.name) === index);
       }
 
       function renderMetricsAndReport(metrics) {
@@ -850,6 +846,12 @@
         const fallback = fallbackAvatar(creator.name);
         const avatar = creator.avatar || fallback;
         return `<img src="${escapeAttr(avatar)}" alt="${escapeAttr(creator.name)} 抖音头像" loading="lazy" referrerpolicy="no-referrer" data-avatar-source="${encodeURIComponent(creator.source)}" onerror="this.onerror=null;this.src='${fallback}'" />`;
+      }
+
+      function creatorCover(creator) {
+        const fallback = fallbackAvatar(creator.name);
+        const cover = creator.cover || creator.avatar || fallback;
+        return `<img src="${escapeAttr(cover)}" alt="${escapeAttr(creator.name)} 博主参考照片" loading="lazy" referrerpolicy="no-referrer" data-avatar-source="${encodeURIComponent(creator.source)}" onerror="this.onerror=null;this.src='${fallback}'" />`;
       }
 
       function highlightText(text) {
@@ -943,7 +945,7 @@
               rel="noreferrer"
               title="打开 ${creator.name} 的抖音主页"
             >
-              ${creatorAvatar(creator)}
+              ${creatorCover(creator)}
               <span>第 ${index + 1} 名</span>
             </a>
             <div class="mr-more-body">
