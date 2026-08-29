@@ -622,13 +622,51 @@
         },
       ];
 
-      function getStoredMetrics() {
+      function getStoredAnalysis() {
         try {
-          const analysis = JSON.parse(sessionStorage.getItem("beauty-analysis") || "{}");
-          return analysis.metrics || fallbackMetrics;
+          return JSON.parse(sessionStorage.getItem("beauty-analysis") || "{}");
         } catch {
-          return fallbackMetrics;
+          return {};
         }
+      }
+
+      function getStoredMetrics(analysis) {
+        return analysis?.metrics && typeof analysis.metrics === "object" ? analysis.metrics : fallbackMetrics;
+      }
+
+      function normalizeTextValue(value) {
+        return String(value || "").trim();
+      }
+
+      function normalizeList(value) {
+        if (Array.isArray(value)) return value.map(normalizeTextValue).filter(Boolean);
+        if (value && typeof value === "object") return Object.values(value).flatMap(normalizeList);
+        return String(value || "")
+          .split(/[、，,\n/|]/)
+          .map(normalizeTextValue)
+          .filter(Boolean);
+      }
+
+      function normalizeFaceShape(value, metrics) {
+        const text = normalizeTextValue(value);
+        const shapes = ["鹅蛋脸", "方圆脸", "短圆脸", "长形脸", "菱形脸", "心形脸", "梨形脸"];
+        return shapes.find((shape) => text.includes(shape)) || inferFaceShape(metrics);
+      }
+
+      function analysisKeywords(analysis) {
+        return [
+          analysis.face_shape,
+          analysis.eye_shape,
+          analysis.skin_color,
+          analysis.style_type,
+          analysis.advantage,
+          analysis.improvement,
+          analysis.makeup_advice,
+          analysis.report,
+          ...normalizeList(analysis.blogger_match_tags),
+        ]
+          .flatMap(normalizeList)
+          .map((item) => item.toLowerCase());
       }
 
       function metricStatus(key, value) {
@@ -715,8 +753,15 @@
         return "建议先从轮廓、眉眼、唇腮三个位置里选一个重点调整，不要一次把所有妆容强度都加满。";
       }
 
-      function inferMatchFocus(metrics) {
+      function inferMatchFocus(metrics, analysis = {}) {
         const focus = [];
+        const aiText = analysisKeywords(analysis).join(" ");
+        if (/新手|日常|通勤|自然/.test(aiText)) focus.push("新手", "日常", "普通人");
+        if (/清冷|淡颜|低饱和|清透/.test(aiText)) focus.push("淡颜", "清透", "风格");
+        if (/明艳|浓颜|甜酷|舞台|上镜/.test(aiText)) focus.push("浓颜", "明艳", "风格");
+        if (/修容|轮廓|骨相|颧骨|下颌/.test(aiText)) focus.push("修容", "轮廓", "骨相");
+        if (/眼妆|眼型|眼距|卧蚕|眉眼/.test(aiText)) focus.push("眼妆", "卧蚕", "眉毛");
+        if (/唇|口红|腮红|气色/.test(aiText)) focus.push("唇妆", "唇腮", "甜美");
         if (metrics.face_length_width_ratio >= 1.28) focus.push("修容", "轮廓", "比例");
         if (metrics.jaw_cheekbone_width_ratio >= 0.86) focus.push("修容", "轮廓", "普通人");
         if (metrics.jaw_cheekbone_width_ratio <= 0.72) focus.push("骨相", "风格", "浓颜");
@@ -765,7 +810,7 @@
         return isStableLocalCreatorImage(creator.cover) || isStableLocalCreatorImage(creator.avatar);
       }
 
-      function scoreCreator(metrics, creator) {
+      function scoreCreator(metrics, creator, analysis = {}) {
         const weights = {
           face_length_width_ratio: 1.25,
           jaw_cheekbone_width_ratio: 1.35,
@@ -782,21 +827,27 @@
           const range = Math.max(metricStandards[key][1] - metricStandards[key][0], 0.04);
           distance += Math.abs(metrics[key] - creator.target[key]) / range * weight;
         });
-        const faceShape = inferFaceShape(metrics);
-        const focus = inferMatchFocus(metrics);
+        const faceShape = normalizeFaceShape(analysis.face_shape, metrics);
+        const focus = inferMatchFocus(metrics, analysis);
+        const aiKeywords = analysisKeywords(analysis);
         const inFaceShapeBucket = creatorBucketNames(faceShape).has(creator.name);
         const bucketBonus = inFaceShapeBucket ? 18 : creator.faceShapes ? -8 : 0;
         const faceBonus = creator.faceShapes ? (creator.faceShapes.includes(faceShape) ? 8 : -8) : 0;
         const focusBonus = focus.filter((tag) => creator.focus?.includes(tag)).length * 4;
+        const aiNameBonus = aiKeywords.some((tag) => creator.name.toLowerCase().includes(tag) || tag.includes(creator.name.toLowerCase())) ? 18 : 0;
+        const aiStyleBonus = aiKeywords.filter((tag) => {
+          const haystack = `${creator.style} ${creator.learn} ${(creator.focus || []).join(" ")}`.toLowerCase();
+          return tag.length >= 2 && haystack.includes(tag);
+        }).length * 3;
         const teachingBonus = creator.focus?.includes("新手") ? 2 : 0;
         const realImageBonus = hasRealCreatorImage(creator) ? 10 : -34;
         const offset = stableCreatorOffset(metrics, creator);
-        return Math.max(58, Math.min(98, Math.round(88 - distance * 1.35 + bucketBonus + faceBonus + focusBonus + teachingBonus + realImageBonus + offset)));
+        return Math.max(58, Math.min(98, Math.round(88 - distance * 1.35 + bucketBonus + faceBonus + focusBonus + aiNameBonus + aiStyleBonus + teachingBonus + realImageBonus + offset)));
       }
 
-      function explainMatch(metrics, creator) {
-        const faceShape = inferFaceShape(metrics);
-        const focus = inferMatchFocus(metrics);
+      function explainMatch(metrics, creator, analysis = {}) {
+        const faceShape = normalizeFaceShape(analysis.face_shape, metrics);
+        const focus = inferMatchFocus(metrics, analysis);
         const diffs = [
           ["脸型长宽比接近，整体轮廓走向更相似。", Math.abs(metrics.face_length_width_ratio - creator.target.face_length_width_ratio)],
           ["下颌与颧骨宽度比例接近，适合参考修容边界。", Math.abs(metrics.jaw_cheekbone_width_ratio - creator.target.jaw_cheekbone_width_ratio)],
@@ -814,23 +865,23 @@
         return reasons.concat(diffs.sort((a, b) => a[1] - b[1]).map((item) => item[0])).slice(0, 3);
       }
 
-      function rankCreators(metrics) {
+      function rankCreators(metrics, analysis = {}) {
         const scored = [...creators, ...legacyCreators]
-          .map((creator) => ({ ...creator, score: scoreCreator(metrics, creator), reasons: explainMatch(metrics, creator) }))
+          .map((creator) => ({ ...creator, score: scoreCreator(metrics, creator, analysis), reasons: explainMatch(metrics, creator, analysis) }))
           .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "zh-Hans-CN"));
         return scored.filter((creator, index, list) => list.findIndex((item) => item.name === creator.name) === index);
       }
 
-      function renderMetricsAndReport(metrics) {
+      function renderMetricsAndReport(metrics, analysis = {}) {
         Object.entries(metricKeys).forEach(([key, id]) => {
           const element = document.getElementById(id);
           if (!element || typeof metrics[key] !== "number") return;
           element.textContent = metrics[key].toFixed(3);
           element.className = metricStatus(key, metrics[key]);
         });
-        document.getElementById("faceShapeResult").textContent = inferFaceShape(metrics);
-        document.getElementById("advantageResult").textContent = inferAdvantage(metrics);
-        document.getElementById("improvementResult").textContent = inferImprovement(metrics);
+        document.getElementById("faceShapeResult").textContent = normalizeFaceShape(analysis.face_shape, metrics);
+        document.getElementById("advantageResult").textContent = normalizeTextValue(analysis.advantage) || inferAdvantage(metrics);
+        document.getElementById("improvementResult").textContent = normalizeTextValue(analysis.improvement) || inferImprovement(metrics);
         document.getElementById("faceShapeDetail").textContent = inferFaceShapeDetail(metrics);
         document.getElementById("advantageDetail").textContent = inferAdvantageDetail(metrics);
         document.getElementById("improvementDetail").textContent = inferImprovementDetail(metrics);
@@ -876,9 +927,9 @@
         return `<strong class="mr-copy-emphasis">${text}</strong>`;
       }
 
-      function creatorCardReason(metrics, creator, index) {
-        const faceShape = inferFaceShape(metrics);
-        const focus = inferMatchFocus(metrics);
+      function creatorCardReason(metrics, creator, index, analysis = {}) {
+        const faceShape = normalizeFaceShape(analysis.face_shape, metrics);
+        const focus = inferMatchFocus(metrics, analysis);
         const mainFocus = focus.find((tag) => creator.focus?.includes(tag)) || creator.focus?.[0] || "妆容";
         const templates = [
           `先看她的${highlightText("轮廓处理和妆面干净度")}。你的${faceShape}不需要照搬五官，更适合学习她把面部边界收干净、让视觉重心更清楚的方式。`,
@@ -888,9 +939,13 @@
         return templates[index % templates.length];
       }
 
-      function creatorLearningPoints(metrics, creator, index) {
+      function creatorLearningPoints(metrics, creator, index, analysis = {}) {
         const base = String(creator.learn || "").split(/[、，,]/).map((item) => item.trim()).filter(Boolean);
         const dynamic = [];
+        const aiText = analysisKeywords(analysis).join(" ");
+        if (/清冷|淡颜|低饱和/.test(aiText)) dynamic.push("整体降低色彩饱和度，保留干净留白");
+        if (/明艳|气色|通勤/.test(aiText)) dynamic.push("唇腮提高气色，但底妆保持轻薄");
+        if (/甜美|幼态|亲和/.test(aiText)) dynamic.push("卧蚕和腮红做柔，不要把眉眼画得太锋利");
         if (metrics.eye_aspect_ratio <= 2.75 || metrics.eye_spacing_face_width_ratio >= 0.275) {
           dynamic.push("眼尾横向拉长，避免眼妆只往上堆");
         } else {
@@ -934,7 +989,7 @@
         }));
       }
 
-      function renderCreators(ranked) {
+      function renderCreators(ranked, analysis = {}) {
         const topWithRealImages = ranked.filter(hasRealCreatorImage).slice(0, 3);
         const top = topWithRealImages.length >= 3 ? topWithRealImages : ranked.slice(0, 3);
         const side = document.getElementById("sideCreatorList");
@@ -954,7 +1009,7 @@
 
         const featuredGrid = document.getElementById("featuredCreatorGrid");
         featuredGrid.innerHTML = top.map((creator, index) => {
-          const learningPoints = creatorLearningPoints(metrics, creator, index);
+          const learningPoints = creatorLearningPoints(metrics, creator, index, analysis);
           return `
           <article class="mr-more-card">
             <a
@@ -970,7 +1025,7 @@
             <div class="mr-more-body">
               <h3>${creator.name}</h3>
               <input value="抖音 ${creator.handle}" readonly />
-              <p class="mr-card-reason">${creatorCardReason(metrics, creator, index)}</p>
+              <p class="mr-card-reason">${creatorCardReason(metrics, creator, index, analysis)}</p>
               <div class="mr-learning-block">
                 <span>学习重点</span>
                 <ul>${learningPoints.map((point) => `<li>${point}</li>`).join("")}</ul>
@@ -1002,7 +1057,8 @@
         }
       }
 
-      const metrics = getStoredMetrics();
+      const analysis = getStoredAnalysis();
+      const metrics = getStoredMetrics(analysis);
       const image = sessionStorage.getItem("beauty-preview-image");
       const name = sessionStorage.getItem("beauty-preview-name");
       const resultPhoto = document.getElementById("resultPhoto");
@@ -1016,8 +1072,8 @@
       if (name) resultFileName.textContent = name;
       const count = localStorage.getItem("beauty-test-count") || "13827";
       document.getElementById("testerCount").textContent = `你是第 ${count} 位完成测试的女生`;
-      renderMetricsAndReport(metrics);
-      renderCreators(rankCreators(metrics));
+      renderMetricsAndReport(metrics, analysis);
+      renderCreators(rankCreators(metrics, analysis), analysis);
     </script>
   </body>
 </html>

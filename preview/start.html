@@ -62,11 +62,11 @@
               <span>光线均匀</span>
             </div>
 
-            <p id="uploadStatus">照片会提交到你的后端 AI 接口，密钥不会暴露在浏览器。</p>
+              <p id="uploadStatus">照片会提交到你的后端 AI 接口，先免费试用，不需要先注册邮箱。</p>
             <button class="mr-next-button" id="analyzeButton" type="button">开始分析 →</button>
 
             <div class="mr-quota">
-              <span>还可免费成功匹配 3 次，失败不计次数</span>
+                <span>新用户可先免费成功匹配 3 次，失败不计次数</span>
               <button type="button">邀请赚次数</button>
             </div>
           </div>
@@ -76,8 +76,8 @@
       <section class="mr-account-section mr-start-account">
         <div class="mr-start-account-copy">
           <p class="mr-meta">ACCOUNT / 账号激活</p>
-          <h2>邮箱密码注册与登录</h2>
-          <p>已有账号可直接登录并兑换邀请码；没有账号时先注册并完成邮箱确认。业务表不会保存密码明文，也不会保存照片、面部比例、报告或博主结果。</p>
+          <h2>可选邮箱登录</h2>
+          <p>先免费体验 3 次，不需要注册。后续想保存报告、领取 Plus 邀请码或继续增加次数时，再用邮箱验证码登录。</p>
           <ul class="mr-start-benefits">
             <li>
               <strong>早期用户资格</strong>
@@ -85,7 +85,7 @@
             </li>
             <li>
               <strong>共 3 次报告额度</strong>
-              <span>1 份正式报告 + 2 次内测重试，180 天内有效</span>
+                <span>先试用，再决定是否登录或升级</span>
             </li>
             <li>
               <strong>普通匹配不限次</strong>
@@ -102,7 +102,7 @@
           <label>邮箱<input id="verifyEmail" type="email" autocomplete="email" placeholder="name@example.com" /></label>
           <label>密码<input id="verifyCode" inputmode="numeric" maxlength="6" placeholder="至少 8 位 / 收到验证码后填这里" /></label>
           <button type="button" id="sendCodeButton">⌕ 发送确认邮件</button>
-          <button class="mr-verify-secondary" type="button" id="verifyCodeButton">验证邮箱并启用分析</button>
+          <button class="mr-verify-secondary" type="button" id="verifyCodeButton">验证邮箱并增加后续额度</button>
           <p class="mr-form-status" id="verifyStatus">验证码会真实发送到你的邮箱，10 分钟内有效。</p>
           <p class="mr-form-status mr-verify-badge-line">状态：<strong id="verifyBadge">未验证</strong></p>
         </form>
@@ -199,7 +199,7 @@
         const remaining = getFreeRemaining();
         quotaText.textContent = remaining > 0
           ? `还可免费成功匹配 ${remaining} 次，失败不计次数`
-          : "免费 3 次已用完，完成邮箱验证后继续分析";
+          : "本设备 3 次免费体验已用完，后续可验证邮箱继续";
       }
 
       function refreshVerifyState() {
@@ -212,6 +212,7 @@
         } else {
           verifyBadge.textContent = "未验证";
           verifyBadge.classList.remove("verified");
+          verifyStatus.textContent = "可先免费体验 3 次；邮箱验证只用于后续保存报告和增加额度。";
         }
         updateQuotaText();
       }
@@ -322,7 +323,7 @@
           uploadIcon.hidden = true;
           analyzeButton.disabled = false;
           analyzeButton.textContent = "开始分析 →";
-          statusText.textContent = `已选择 ${file.name}，点击开始分析后会请求 Cloudflare 后端 AI 生成报告。`;
+            statusText.textContent = `已选择 ${file.name}，点击开始分析后会调用后端 AI 接口生成报告。`;
         };
         reader.readAsDataURL(file);
       });
@@ -334,7 +335,7 @@
         }
 
         if (!canAnalyze()) {
-          verifyStatus.textContent = "免费 3 次已用完，请完成邮箱验证后继续 AI 分析。";
+          verifyStatus.textContent = "本设备免费 3 次已用完，后续可验证邮箱继续。";
           statusText.textContent = "你已经用完 3 次免费匹配，验证邮箱后可以继续分析。";
           document.querySelector(".mr-start-account")?.scrollIntoView({ behavior: "smooth", block: "center" });
           return;
