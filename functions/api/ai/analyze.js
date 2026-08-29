@@ -130,7 +130,34 @@ function normalizeResult(parsed, input) {
   return result;
 }
 
-export async function onRequestPost(context) {
+function extractAssistantText(data) {
+  const message = data?.choices?.[0]?.message;
+  const content = message?.content;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (typeof item?.text === "string") return item.text;
+        if (typeof item?.content === "string") return item.content;
+        return "";
+      })
+      .join("\n")
+      .trim();
+  }
+  if (typeof data?.choices?.[0]?.text === "string") return data.choices[0].text;
+  if (typeof data?.output_text === "string") return data.output_text;
+  if (Array.isArray(data?.output)) {
+    return data.output
+      .flatMap((item) => item?.content || [])
+      .map((item) => item?.text || "")
+      .join("\n")
+      .trim();
+  }
+  return "";
+}
+
+async function handleAnalyze(context) {
   const { request, env } = context;
 
   let input;
@@ -226,16 +253,17 @@ export async function onRequestPost(context) {
     return jsonResponse({ ok: false, detail: `AI 接口请求失败：${detail.slice(0, 500)}` }, 502);
   }
 
+  const responseText = await aiResponse.text().catch(() => "");
   let data;
   try {
-    data = await aiResponse.json();
+    data = JSON.parse(responseText);
   } catch {
-    return jsonResponse({ ok: false, detail: "AI 返回格式异常，无法解析 JSON。" }, 502);
+    return jsonResponse({ ok: false, detail: `AI 返回格式异常，无法解析 JSON：${responseText.slice(0, 300)}` }, 502);
   }
 
-  const rawText = data?.choices?.[0]?.message?.content;
-  if (typeof rawText !== "string" || !rawText.trim()) {
-    return jsonResponse({ ok: false, detail: "AI 返回格式异常，未找到 choices[0].message.content。" }, 502);
+  const rawText = extractAssistantText(data);
+  if (!rawText) {
+    return jsonResponse({ ok: false, detail: `AI 返回格式异常，未找到有效内容：${JSON.stringify(data).slice(0, 500)}` }, 502);
   }
 
   if (shouldConsumeFreeQuota) {
@@ -253,6 +281,21 @@ export async function onRequestPost(context) {
     result: normalizeResult(parsed, input),
     raw_text: rawText,
   });
+}
+
+export async function onRequestPost(context) {
+  try {
+    return await handleAnalyze(context);
+  } catch (error) {
+    console.error("analyze error", error);
+    return jsonResponse(
+      {
+        ok: false,
+        detail: `AI 分析服务异常：${error?.message || error || "未知错误"}`,
+      },
+      500
+    );
+  }
 }
 
 export function onRequest() {
