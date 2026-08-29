@@ -37,6 +37,17 @@ async function getVerifiedEmail(env, email) {
   return Boolean(verified);
 }
 
+async function ensureFreeQuotaTable(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS free_analysis_clients (
+      client_id TEXT PRIMARY KEY,
+      used_count INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`
+  ).run();
+}
+
 async function getFreeQuota(env, clientId) {
   if (!env.DB) {
     return { ok: false, status: 500, detail: "D1 DB 未绑定" };
@@ -45,6 +56,8 @@ async function getFreeQuota(env, clientId) {
   if (!clientId) {
     return { ok: false, status: 401, detail: "免费次数身份缺失，请刷新页面后重试" };
   }
+
+  await ensureFreeQuotaTable(env);
 
   const row = await env.DB.prepare("SELECT used_count FROM free_analysis_clients WHERE client_id = ?")
     .bind(clientId)
@@ -59,6 +72,8 @@ async function getFreeQuota(env, clientId) {
 }
 
 async function consumeFreeQuota(env, clientId) {
+  await ensureFreeQuotaTable(env);
+
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
     `INSERT INTO free_analysis_clients (client_id, used_count, created_at, updated_at)
