@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>变美AI | 个人变美报告</title>
+    <title>变美参考 | 个人变美报告</title>
         <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <header class="mr-header compact">
       <a class="mr-brand" href="/">
-        <strong>变美AI</strong>
+        <strong>变美参考</strong>
         <span>BEAUTY<br />MATCH</span>
       </a>
       <nav>
@@ -50,7 +50,7 @@
             </div>
             <span>分析完成</span>
           </div>
-          <div class="mr-success">照片质量通过，已根据本次面部比例重新匹配相似博主。</div>
+          <div class="mr-success">照片清晰度通过，已根据本次脸型比例生成妆容参考方向。</div>
 
           <div class="mr-metric-grid">
             <div><span>脸部长宽比</span><strong id="metricFaceRatio">1.179</strong></div>
@@ -66,7 +66,7 @@
 
           <div class="mr-metric-legend">
             <span><i class="legend-good"></i>达标</span>
-            <span><i class="legend-weak"></i>欠缺</span>
+            <span><i class="legend-weak"></i>参考点</span>
             <span><i class="legend-mid"></i>中等</span>
           </div>
 
@@ -77,31 +77,31 @@
               <span id="faceShapeDetail">整体比例均衡，适合参考干净、轻轮廓的妆容路线。</span>
             </article>
             <article>
-              <p>我的优势</p>
+              <p>五官特点</p>
               <strong id="advantageResult">眼睛有辨识度</strong>
               <span id="advantageDetail">眼部比例会影响第一眼记忆点，适合把妆容重点放在眉眼。</span>
             </article>
             <article>
-              <p>提升方向</p>
+              <p>适合参考方向</p>
               <strong id="improvementResult">增强轮廓感</strong>
-              <span id="improvementDetail">先调整最影响比例观感的位置，再去参考相似博主的妆容。</span>
+              <span id="improvementDetail">先看最影响风格呈现的位置，再参考适合自己的妆容重点。</span>
             </article>
           </div>
 
           <div class="mr-usage-block">
-            <p class="mr-meta">WHAT THESE NUMBERS DO</p>
+            <p class="mr-meta">STYLE REFERENCE</p>
             <ul>
-              <li>用脸长宽比、下颌宽度判断脸型和轮廓路线。</li>
-              <li>用眼距、眼型比例匹配面部结构更接近的博主。</li>
-              <li>用鼻翼、唇宽、眉唇比例决定妆容迁移强弱。</li>
+              <li>用脸型比例判断更适合参考的轮廓路线。</li>
+              <li>用眼距、眼型比例匹配眼妆与眉型参考。</li>
+              <li>用鼻翼、唇宽、眉唇比例给出妆容适配建议。</li>
             </ul>
           </div>
 
           <div class="mr-match-block">
-            <p class="mr-meta">CREATOR MATCH</p>
-            <h3>推荐博主 Top 3</h3>
+            <p class="mr-meta">BEAUTY REFERENCE</p>
+            <h3>妆容参考博主 Top 3</h3>
             <div class="mr-side-creator-list" id="sideCreatorList"></div>
-            <div class="mr-match-row"><span id="bestMatchLabel">首选匹配</span><b id="bestMatchScore">92%</b></div>
+            <div class="mr-match-row"><span id="bestMatchLabel">首选参考</span><b id="bestMatchScore">92%</b></div>
             <div class="mr-match-meter"><i id="bestMatchMeter"></i></div>
             <div class="mr-mini-tags" id="bestMatchTags"></div>
             <button class="mr-share-pk-button" id="sharePkButton" type="button">邀请闺蜜审美PK</button>
@@ -111,8 +111,8 @@
       </section>
 
       <section class="mr-creator-section">
-        <p class="mr-meta">MATCH / 相似匹配</p>
-        <h2>和你面部结构更接近的博主</h2>
+        <p class="mr-meta">REFERENCE / 妆容参考</p>
+        <h2>更适合参考的妆容博主</h2>
         <div class="mr-more-grid mr-top3-grid" id="featuredCreatorGrid"></div>
 
         <div class="mr-plus-banner">
@@ -654,20 +654,20 @@
         if (!text) return fallback;
         const rules = type === "improvement"
           ? [
-              [/留白|眉眼|额头|上半区/, "加强眉眼层次"],
+              [/留白|眉眼|额头|上半区/, "更适合强调眉眼层次"],
               [/眼距|聚拢|眼头|山根/, "聚拢眉眼重心"],
               [/下庭|脸长|纵向/, "平衡下庭比例"],
               [/眉毛|眉色|眉形/, "调整眉毛浓度"],
               [/颧骨|下颌|轮廓|修容/, "优化轮廓边界"],
-              [/唇|口红|唇形/, "提升唇部气色"],
+              [/唇|口红|唇形/, "适合提高唇部气色"],
               [/腮红|气色/, "调整腮红位置"],
             ]
           : [
-              [/轮廓|下颌|脸部线条/, "轮廓流畅"],
+              [/轮廓|下颌|脸部线条/, "轮廓类型清晰"],
               [/眼睛|眼型|眼神|卧蚕|睫毛/, "眼睛有辨识度"],
               [/中庭|三庭|比例/, "比例协调"],
               [/鼻|面中/, "面中精致"],
-              [/唇|唇形|口红/, "唇部有记忆点"],
+              [/唇|唇形|口红/, "唇部风格明显"],
               [/清透|留白|干净/, "清透感强"],
             ];
         const matched = rules.find(([pattern]) => pattern.test(text));
@@ -752,7 +752,7 @@
         if (metrics.face_length_width_ratio >= 1.3) return "降低纵向拉长感";
         if (metrics.nose_width_ratio >= 0.26) return "收窄面中重心";
         if (metrics.eye_spacing_face_width_ratio >= 0.28 || metrics.eye_aspect_ratio <= 2.65) return "增加眼妆横向延展";
-        if (metrics.lip_width_ratio <= 0.28) return "加强唇部色彩重心";
+        if (metrics.lip_width_ratio <= 0.28) return "适合提高唇部色彩重心";
         if (metrics.jaw_cheekbone_width_ratio <= 0.74 && metrics.lower_face_ratio <= 0.36) return "柔化颧骨转折";
         return "增强轮廓感";
       }
@@ -768,7 +768,7 @@
           "梨形脸": "下庭或下颌量感更突出，视觉重心容易向下。建议用上半脸提亮、眉眼拉伸和轻修容，把注意力重新拉回眉眼区。",
           "鹅蛋脸": "整体长宽和下颌比例较均衡，适配度比较高。妆容重点可以放在风格选择：清冷、甜美、通勤或浓颜都能做，但要控制单点过重。",
         };
-        return details[faceShape] || "整体比例会影响适合参考哪一类博主，系统会优先匹配面部结构更接近的妆容路线。";
+        return details[faceShape] || "整体比例会影响适合参考哪一类妆容路线，系统会优先给出更合适的学习方向。";
       }
 
       function inferAdvantageDetail(metrics) {
@@ -892,8 +892,8 @@
         const faceShape = normalizeFaceShape(analysis.face_shape, metrics);
         const focus = inferMatchFocus(metrics, analysis);
         const diffs = [
-          ["脸型长宽比接近，整体轮廓走向更相似。", Math.abs(metrics.face_length_width_ratio - creator.target.face_length_width_ratio)],
-          ["下颌与颧骨宽度比例接近，适合参考修容边界。", Math.abs(metrics.jaw_cheekbone_width_ratio - creator.target.jaw_cheekbone_width_ratio)],
+          ["脸型比例适合参考她的轮廓处理方式。", Math.abs(metrics.face_length_width_ratio - creator.target.face_length_width_ratio)],
+          ["下颌与颧骨比例适合参考修容边界。", Math.abs(metrics.jaw_cheekbone_width_ratio - creator.target.jaw_cheekbone_width_ratio)],
           ["眼距和眼型比例接近，眼妆放大方式可参考。", Math.abs(metrics.eye_spacing_face_width_ratio - creator.target.eye_spacing_face_width_ratio) + Math.abs(metrics.eye_aspect_ratio - creator.target.eye_aspect_ratio) / 10],
           ["唇宽与眉唇比例接近，适合学习唇腮同色处理。", Math.abs(metrics.lip_width_ratio - creator.target.lip_width_ratio) + Math.abs(metrics.brow_lip_ratio - creator.target.brow_lip_ratio)],
         ];
@@ -903,7 +903,7 @@
         }
         const matchedFocus = focus.filter((tag) => creator.focus?.includes(tag)).slice(0, 2);
         if (matchedFocus.length) {
-          reasons.push(`本次提升方向匹配：${matchedFocus.join("、")}。`);
+          reasons.push(`本次适合学习重点：${matchedFocus.join("、")}。`);
         }
         return reasons.concat(diffs.sort((a, b) => a[1] - b[1]).map((item) => item[0])).slice(0, 3);
       }

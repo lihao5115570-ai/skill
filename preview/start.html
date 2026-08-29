@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>变美AI | 上传照片分析</title>
+    <title>变美参考 | 上传照片分析</title>
         <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <header class="mr-header compact">
       <a class="mr-brand" href="/">
-        <strong>变美AI</strong>
+        <strong>变美参考</strong>
         <span>BEAUTY<br />MATCH</span>
       </a>
       <nav>
@@ -62,7 +62,7 @@
               <span>光线均匀</span>
             </div>
 
-              <p id="uploadStatus">照片会提交到你的后端 AI 接口，先免费试用，不需要先注册邮箱。</p>
+              <p id="uploadStatus">照片会提交到你的后端分析接口，先免费试用，不需要先注册邮箱。</p>
             <button class="mr-next-button" id="analyzeButton" type="button">开始分析 →</button>
 
             <div class="mr-quota">
@@ -163,7 +163,7 @@
           style_type: "待识别",
           advantage: "",
           improvement: "",
-          quality: { passed: true, message: "照片质量通过，已开始匹配相似博主。" },
+          quality: { passed: true, message: "照片清晰度通过，已开始生成妆容参考方向。" },
           metrics,
         };
       }
@@ -208,7 +208,7 @@
           verifyEmail.value = email;
           verifyBadge.textContent = "已验证";
           verifyBadge.classList.add("verified");
-          verifyStatus.textContent = `邮箱 ${email} 已验证，可以开始 AI 分析。`;
+          verifyStatus.textContent = `邮箱 ${email} 已验证，可以开始智能分析。`;
         } else {
           verifyBadge.textContent = "未验证";
           verifyBadge.classList.remove("verified");
@@ -323,7 +323,7 @@
           uploadIcon.hidden = true;
           analyzeButton.disabled = false;
           analyzeButton.textContent = "开始分析 →";
-            statusText.textContent = `已选择 ${file.name}，点击开始分析后会调用后端 AI 接口生成报告。`;
+            statusText.textContent = `已选择 ${file.name}，点击开始分析后会调用后端接口生成报告。`;
         };
         reader.readAsDataURL(file);
       });
@@ -343,7 +343,7 @@
 
         analyzeButton.textContent = "分析中...";
         analyzeButton.disabled = true;
-        statusText.textContent = "AI 正在分析面部比例、照片质量和相似博主，请稍候。";
+        statusText.textContent = "正在分析面部比例、照片清晰度和妆容参考方向，请稍候。";
 
         try {
           const result = await requestAiAnalysis();

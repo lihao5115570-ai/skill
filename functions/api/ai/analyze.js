@@ -139,10 +139,34 @@ function normalizeResult(parsed, input) {
     "report",
   ]) {
     if (source[key] !== undefined && source[key] !== null && source[key] !== "") {
-      result[key] = source[key];
+      result[key] = softenBeautyCopy(source[key]);
     }
   }
   return result;
+}
+
+function softenBeautyCopy(value) {
+  if (Array.isArray(value)) return value.map(softenBeautyCopy);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, softenBeautyCopy(item)]));
+  }
+  if (typeof value !== "string") return value;
+  return value
+    .replace(/缺点/g, "面部特点")
+    .replace(/问题区域/g, "适合参考区域")
+    .replace(/需要改善/g, "适合调整")
+    .replace(/颜值评分/g, "风格参考")
+    .replace(/面部缺陷/g, "面部特点")
+    .replace(/下颌问题/g, "下颌线条特点")
+    .replace(/鼻子不够立体/g, "面中立体感可通过妆容表达")
+    .replace(/缺陷/g, "特点")
+    .replace(/不足/g, "可参考点")
+    .replace(/不够/g, "可以更")
+    .replace(/加强/g, "更适合强调")
+    .replace(/改善/g, "调整")
+    .replace(/相似度/g, "适配度")
+    .replace(/最像/g, "更适合参考")
+    .replace(/长得像/g, "妆容参考方向接近");
 }
 
 function extractAssistantText(data) {
@@ -219,12 +243,28 @@ async function handleAnalyze(context) {
     .filter(Boolean)
     .join("\n");
 
+  const safePrompt = [
+    "请做女性妆容参考与面部风格分析。必须只输出 JSON，不要 Markdown。",
+    "字段包括：face_shape, eye_shape, skin_color, style_type, advantage, improvement, quality, metrics, blogger_match_tags, makeup_advice, report。",
+    "只做风格、比例、妆容建议；不要做身份识别、颜值打分、医疗诊断或敏感属性判断。",
+    "不要写这些词：缺点、问题区域、需要改善、颜值评分、面部缺陷、下颌问题、鼻子不够立体、你最像谁、相似度。",
+    "用更温和的表达：面部特点、风格特征、适合参考方向、妆容适配建议、五官特点、适合学习的妆容重点。",
+    "不要强调用户长得像某个博主，只能表达：根据脸型比例和妆容风格，适合参考某类妆容博主。",
+    "advantage 字段用 1 到 3 条短句描述五官特点，每条不超过 28 个中文字符。",
+    "improvement 字段用 1 到 3 条短句描述适合参考方向，每条不超过 28 个中文字符，例如：更适合强调眉眼层次、适合柔化轮廓边界。",
+    "blogger_match_tags 只能输出妆容学习标签，例如：脸型参考、眼妆参考、眉型参考、唇腮参考、底妆参考。",
+    text ? `用户补充：${text}` : "",
+    input.client_analysis ? `前端辅助比例：${JSON.stringify(input.client_analysis)}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   const content = imageDataUrl
     ? [
-        { type: "text", text: userPrompt },
+        { type: "text", text: safePrompt },
         { type: "image_url", image_url: { url: imageDataUrl } },
       ]
-    : userPrompt;
+    : safePrompt;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort("timeout"), 45000);
