@@ -845,16 +845,21 @@ a {
 .mr-result-cards strong {
   display: block;
   margin-top: 6px;
-  font-size: 22px;
-  line-height: 1.18;
+  font-size: 18px;
+  line-height: 1.28;
+  letter-spacing: 0;
 }
 
 .mr-result-cards article > span {
   display: block;
   margin-top: 9px;
   color: #4f5a5f;
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.65;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 .mr-usage-block {
@@ -2389,11 +2394,11 @@ a {
   }
 
   .mr-result-cards strong {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .mr-result-cards article > span {
-    font-size: 13px;
+    font-size: 12px;
   }
 }
 

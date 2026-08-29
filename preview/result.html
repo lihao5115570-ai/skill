@@ -638,6 +638,49 @@
         return String(value || "").trim();
       }
 
+      function readableItems(value) {
+        if (Array.isArray(value)) return value.flatMap(readableItems);
+        if (value && typeof value === "object") return Object.values(value).flatMap(readableItems);
+        return String(value || "")
+          .split(/[。；;\n]+|,(?=[\u4e00-\u9fa5])/)
+          .map((item) => item.replace(/^[，,、\s]+|[，,、\s]+$/g, "").trim())
+          .filter(Boolean);
+      }
+
+      function compactTitle(value, fallback, type) {
+        const items = readableItems(value);
+        const first = items[0] || "";
+        const text = first || normalizeTextValue(value);
+        if (!text) return fallback;
+        const rules = type === "improvement"
+          ? [
+              [/留白|眉眼|额头|上半区/, "加强眉眼层次"],
+              [/眼距|聚拢|眼头|山根/, "聚拢眉眼重心"],
+              [/下庭|脸长|纵向/, "平衡下庭比例"],
+              [/眉毛|眉色|眉形/, "调整眉毛浓度"],
+              [/颧骨|下颌|轮廓|修容/, "优化轮廓边界"],
+              [/唇|口红|唇形/, "提升唇部气色"],
+              [/腮红|气色/, "调整腮红位置"],
+            ]
+          : [
+              [/轮廓|下颌|脸部线条/, "轮廓流畅"],
+              [/眼睛|眼型|眼神|卧蚕|睫毛/, "眼睛有辨识度"],
+              [/中庭|三庭|比例/, "比例协调"],
+              [/鼻|面中/, "面中精致"],
+              [/唇|唇形|口红/, "唇部有记忆点"],
+              [/清透|留白|干净/, "清透感强"],
+            ];
+        const matched = rules.find(([pattern]) => pattern.test(text));
+        if (matched) return matched[1];
+        return text.replace(/[，,。；;：:].*$/, "").slice(0, 10) || fallback;
+      }
+
+      function compactDetail(value, fallback) {
+        const items = readableItems(value).slice(0, 2);
+        if (!items.length) return fallback;
+        return items.map((item) => item.length > 52 ? `${item.slice(0, 52)}...` : item).join(" ");
+      }
+
       function normalizeList(value) {
         if (Array.isArray(value)) return value.map(normalizeTextValue).filter(Boolean);
         if (value && typeof value === "object") return Object.values(value).flatMap(normalizeList);
@@ -879,12 +922,14 @@
           element.textContent = metrics[key].toFixed(3);
           element.className = metricStatus(key, metrics[key]);
         });
+        const inferredAdvantage = inferAdvantage(metrics);
+        const inferredImprovement = inferImprovement(metrics);
         document.getElementById("faceShapeResult").textContent = normalizeFaceShape(analysis.face_shape, metrics);
-        document.getElementById("advantageResult").textContent = normalizeTextValue(analysis.advantage) || inferAdvantage(metrics);
-        document.getElementById("improvementResult").textContent = normalizeTextValue(analysis.improvement) || inferImprovement(metrics);
+        document.getElementById("advantageResult").textContent = compactTitle(analysis.advantage, inferredAdvantage, "advantage");
+        document.getElementById("improvementResult").textContent = compactTitle(analysis.improvement, inferredImprovement, "improvement");
         document.getElementById("faceShapeDetail").textContent = inferFaceShapeDetail(metrics);
-        document.getElementById("advantageDetail").textContent = inferAdvantageDetail(metrics);
-        document.getElementById("improvementDetail").textContent = inferImprovementDetail(metrics);
+        document.getElementById("advantageDetail").textContent = compactDetail(analysis.advantage, inferAdvantageDetail(metrics));
+        document.getElementById("improvementDetail").textContent = compactDetail(analysis.improvement, inferImprovementDetail(metrics));
       }
 
       function escapeAttr(value) {
