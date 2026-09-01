@@ -72,6 +72,22 @@
       const sendCode = document.getElementById("plusSendCode");
       const emailInput = document.getElementById("plusEmail");
       const codeInput = document.getElementById("plusCode");
+      const adminEmails = new Set(["lihao5115570@163.com"]);
+
+      function isAdminEmail(email) {
+        return adminEmails.has(String(email || "").trim().toLowerCase());
+      }
+
+      function activateAdminEmail(email) {
+        const normalized = String(email || "").trim().toLowerCase();
+        if (!isAdminEmail(normalized)) return false;
+        localStorage.setItem("beauty-verified-email", normalized);
+        localStorage.setItem("beauty-admin-email", normalized);
+        localStorage.removeItem("beauty-free-analysis-used");
+        status.textContent = "管理员邮箱已免验证码启用，正在进入账号页。";
+        window.location.href = "/plus-account";
+        return true;
+      }
 
       async function postJson(url, body) {
         const response = await fetch(url, {
@@ -92,6 +108,7 @@
           status.textContent = "请先填写邮箱。";
           return;
         }
+        if (activateAdminEmail(email)) return;
 
         sendCode.disabled = true;
         status.textContent = "正在发送验证码邮件...";
@@ -113,6 +130,7 @@
         event.preventDefault();
         const email = emailInput.value.trim().toLowerCase();
         const code = codeInput.value.trim();
+        if (activateAdminEmail(email)) return;
         if (!email || !code) {
           status.textContent = "请填写邮箱和验证码。";
           return;

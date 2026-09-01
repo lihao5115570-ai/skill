@@ -19,12 +19,21 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function isAdminEmail(env, email) {
+  const adminEmails = String(env.ADMIN_EMAILS || "lihao5115570@163.com")
+    .split(/[,\s;]+/)
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+  return adminEmails.includes(normalizeEmail(email));
+}
+
 function normalizeClientId(value) {
   const clientId = String(value || "").trim();
   return /^[a-zA-Z0-9_-]{12,80}$/.test(clientId) ? clientId : "";
 }
 
 async function getVerifiedEmail(env, email) {
+  if (isAdminEmail(env, email)) return true;
   if (!env.DB || !isValidEmail(email)) return false;
 
   const now = Math.floor(Date.now() / 1000);
