@@ -1,6 +1,6 @@
-# AI 变美测试网站
+# 变美参考测试网站
 
-这是一个适合部署到 Cloudflare Pages + Pages Functions 的 AI 变美测试网站。
+这是一个适合部署到 Cloudflare Pages + Pages Functions 的变美参考测试网站。
 
 前端不会直接调用 AI 或 Resend，也不会暴露 API Key。所有敏感请求都走本站后端接口：
 
@@ -15,8 +15,11 @@ POST /api/ai/analyze
 - `preview/`：前端静态页面。
 - `functions/api/auth/send-code.js`：发送邮箱验证码。
 - `functions/api/auth/verify.js`：验证邮箱验证码。
-- `functions/api/ai/analyze.js`：AI 分析代理接口。
+- `functions/api/ai/analyze.js`：照片分析与推荐代理接口。
+- `functions/lib/recommendation-engine.js`：后端匹配引擎，负责动态计算博主推荐排序。
+- `functions/lib/face-profile-schema.js`：用户与博主共用的 FaceProfile 标准字段。
 - `database/d1-email-auth.sql`：Cloudflare D1 邮箱验证码表结构。
+- `database/d1-recommendation-engine.sql`：Cloudflare D1 推荐系统表结构。
 - `scripts/prepare-sites-build.mjs`：构建脚本，把 `preview/` 复制到 `dist/`。
 - `wrangler.toml`：Cloudflare Pages 配置，已绑定 D1 数据库 `bianmei_auth`。
 
@@ -66,6 +69,7 @@ database_id = "1f971de0-dfec-4a37-93d2-6626f26fc1bb"
 
 ```bash
 npx wrangler d1 execute bianmei_auth --file=database/d1-email-auth.sql --remote
+npx wrangler d1 execute bianmei_auth --file=database/d1-recommendation-engine.sql --remote
 ```
 
 执行后会创建：
@@ -74,6 +78,39 @@ npx wrangler d1 execute bianmei_auth --file=database/d1-email-auth.sql --remote
 email_codes
 email_limits
 free_analysis_clients
+user_face_profiles
+recommendation_logs
+bloggers
+blogger_profiles
+blogger_images
+blogger_makeup_tags
+```
+
+## 推荐系统逻辑
+
+用户上传照片后，后端会先提取标准化 `FaceProfile`，再读取 `blogger_profiles` 中已经审核通过的博主结构化资料，由程序计算 Top 推荐。模型只负责提取结构化面部/妆容参考字段，不决定哪个博主排第一。
+
+匹配权重集中在 `functions/lib/matching-weights.js`，当前包含：
+
+```text
+脸型 20%
+眼型 + 眼皮 18%
+中庭比例 12%
+下颌 + 颧骨 10%
+眉眼关系 10%
+五官量感 10%
+五官集中度 8%
+软硬线条 5%
+风格倾向 4%
+妆容标签 3%
+```
+
+如果 D1 中还没有 `blogger_profiles` 数据，线上会暂时使用项目内已整理的 38 个博主资料作为兜底；正式运营时应从后台审核后写入 D1，后端会优先读取 D1 数据。
+
+推荐差异测试：
+
+```bash
+npm run test:recommendation
 ```
 
 ## 邮箱验证码规则
@@ -144,6 +181,7 @@ http://127.0.0.1:8788/start
 
 ```bash
 npx wrangler d1 execute bianmei_auth --file=database/d1-email-auth.sql --remote
+npx wrangler d1 execute bianmei_auth --file=database/d1-recommendation-engine.sql --remote
 ```
 
 4. 推送到 GitHub main。

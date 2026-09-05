@@ -1,3 +1,9 @@
+import { normalizeFaceProfile, validateFaceProfile, compactSentence } from "../../lib/face-profile-schema.js";
+import { rankBloggers, categoryRecommendations } from "../../lib/recommendation-engine.js";
+import { readUsableBloggers } from "../../lib/blogger-repository.js";
+
+const ANALYSIS_VERSION = "user-face-profile-v1.0.0";
+
 const jsonHeaders = {
   "Content-Type": "application/json; charset=utf-8",
   "Cache-Control": "no-store",
@@ -35,18 +41,17 @@ function normalizeClientId(value) {
 async function getVerifiedEmail(env, email) {
   if (isAdminEmail(env, email)) return true;
   if (!env.DB || !isValidEmail(email)) return false;
-
   const now = Math.floor(Date.now() / 1000);
   const verified = await env.DB.prepare(
     "SELECT id FROM email_codes WHERE email = ? AND verified = 1 AND expires_at > ? ORDER BY created_at DESC LIMIT 1"
   )
     .bind(email, now)
     .first();
-
   return Boolean(verified);
 }
 
-async function ensureFreeQuotaTable(env) {
+async function ensureTables(env) {
+  if (!env.DB) return;
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS free_analysis_clients (
       client_id TEXT PRIMARY KEY,
@@ -55,34 +60,46 @@ async function ensureFreeQuotaTable(env) {
       updated_at INTEGER NOT NULL
     )`
   ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS user_face_profiles (
+      id TEXT PRIMARY KEY,
+      image_hash TEXT,
+      analysis_version TEXT NOT NULL,
+      face_profile TEXT NOT NULL,
+      raw_ai_result TEXT,
+      model_name TEXT,
+      created_at INTEGER NOT NULL,
+      UNIQUE(image_hash, analysis_version)
+    )`
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS recommendation_logs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      user_face_profile_id TEXT,
+      blogger_id TEXT NOT NULL,
+      overall_score INTEGER NOT NULL,
+      dimension_scores TEXT NOT NULL,
+      matched_features TEXT NOT NULL,
+      different_features TEXT NOT NULL,
+      algorithm_version TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )`
+  ).run();
 }
 
 async function getFreeQuota(env, clientId) {
-  if (!env.DB) {
-    return { ok: false, status: 500, detail: "D1 DB 未绑定" };
-  }
-
-  if (!clientId) {
-    return { ok: false, status: 401, detail: "免费次数身份缺失，请刷新页面后重试" };
-  }
-
-  await ensureFreeQuotaTable(env);
-
-  const row = await env.DB.prepare("SELECT used_count FROM free_analysis_clients WHERE client_id = ?")
-    .bind(clientId)
-    .first();
+  if (!env.DB) return { ok: false, status: 500, detail: "D1 DB 未绑定" };
+  if (!clientId) return { ok: false, status: 401, detail: "免费次数身份缺失，请刷新页面后重试。" };
+  await ensureTables(env);
+  const row = await env.DB.prepare("SELECT used_count FROM free_analysis_clients WHERE client_id = ?").bind(clientId).first();
   const used = Number(row?.used_count || 0);
-
-  if (used >= 3) {
-    return { ok: false, status: 401, detail: "免费 3 次已用完，请先完成邮箱验证" };
-  }
-
+  if (used >= 3) return { ok: false, status: 401, detail: "免费 3 次已用完，验证邮箱后可以继续分析。" };
   return { ok: true, used, remaining: 3 - used };
 }
 
 async function consumeFreeQuota(env, clientId) {
-  await ensureFreeQuotaTable(env);
-
+  await ensureTables(env);
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
     `INSERT INTO free_analysis_clients (client_id, used_count, created_at, updated_at)
@@ -94,12 +111,15 @@ async function consumeFreeQuota(env, clientId) {
     .run();
 }
 
-function extractJsonObject(text) {
-  const stripped = String(text || "")
-    .trim()
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "");
+async function sha256(value) {
+  if (!value) return "";
+  const bytes = new TextEncoder().encode(value);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(hashBuffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
+function extractJsonObject(text) {
+  const stripped = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
   try {
     const parsed = JSON.parse(stripped);
     return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
@@ -115,43 +135,16 @@ function extractJsonObject(text) {
   }
 }
 
-function fallbackResult(input) {
-  const client = input.client_analysis || {};
-  return {
-    face_shape: client.face_shape || "",
-    eye_shape: client.eye_shape || "",
-    skin_color: client.skin_color || "",
-    style_type: client.style_type || "",
-    advantage: client.advantage || "",
-    improvement: client.improvement || "",
-    quality: client.quality || { passed: true, message: "照片质量通过，已开始匹配相似博主。" },
-    metrics: client.metrics || {},
-  };
-}
-
-function normalizeResult(parsed, input) {
-  const result = fallbackResult(input);
-  const source = parsed && typeof parsed.result === "object" ? parsed.result : parsed;
-  if (!source || typeof source !== "object") return result;
-
-  for (const key of [
-    "face_shape",
-    "eye_shape",
-    "skin_color",
-    "style_type",
-    "advantage",
-    "improvement",
-    "quality",
-    "metrics",
-    "blogger_match_tags",
-    "makeup_advice",
-    "report",
-  ]) {
-    if (source[key] !== undefined && source[key] !== null && source[key] !== "") {
-      result[key] = softenBeautyCopy(source[key]);
-    }
+function extractAssistantText(data) {
+  const message = data?.choices?.[0]?.message;
+  const content = message?.content;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content.map((item) => item?.text || item?.content || (typeof item === "string" ? item : "")).join("\n").trim();
   }
-  return result;
+  if (typeof data?.choices?.[0]?.text === "string") return data.choices[0].text;
+  if (typeof data?.output_text === "string") return data.output_text;
+  return "";
 }
 
 function softenBeautyCopy(value) {
@@ -161,6 +154,7 @@ function softenBeautyCopy(value) {
   }
   if (typeof value !== "string") return value;
   return value
+    .replace(/AI/g, "")
     .replace(/缺点/g, "面部特点")
     .replace(/问题区域/g, "适合参考区域")
     .replace(/需要改善/g, "适合调整")
@@ -178,36 +172,164 @@ function softenBeautyCopy(value) {
     .replace(/长得像/g, "妆容参考方向接近");
 }
 
-function extractAssistantText(data) {
-  const message = data?.choices?.[0]?.message;
-  const content = message?.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .map((item) => {
-        if (typeof item === "string") return item;
-        if (typeof item?.text === "string") return item.text;
-        if (typeof item?.content === "string") return item.content;
-        return "";
-      })
-      .join("\n")
-      .trim();
+function fallbackMetrics(input) {
+  return input.client_analysis?.metrics || {
+    face_length_width_ratio: 1.18,
+    jaw_cheekbone_width_ratio: 0.8,
+    upper_face_cheekbone_ratio: 1,
+    lower_face_ratio: 0.39,
+    eye_spacing_face_width_ratio: 0.25,
+    eye_aspect_ratio: 2.95,
+    nose_width_ratio: 0.24,
+    lip_width_ratio: 0.32,
+    brow_lip_ratio: 0.37,
+  };
+}
+
+function profileFromParsed(parsed, input) {
+  const source = parsed?.face_profile || parsed?.FaceProfile || parsed?.result?.face_profile || parsed?.result || parsed || {};
+  return normalizeFaceProfile(source, source.metrics || fallbackMetrics(input));
+}
+
+function legacyResultFields(profile, parsed, input) {
+  const source = parsed?.result || parsed || {};
+  const faceShapeZh = {
+    oval: "鹅蛋脸",
+    round: "圆脸",
+    square: "方圆脸",
+    long: "长形脸",
+    heart: "心形脸",
+    diamond: "菱形脸",
+    oval_round: "鹅蛋偏圆",
+    oval_long: "鹅蛋偏长",
+  }[profile.face_shape] || "鹅蛋脸";
+  return {
+    face_shape: faceShapeZh,
+    eye_shape: source.eye_shape || input.client_analysis?.eye_shape || "",
+    skin_color: source.skin_color || input.client_analysis?.skin_color || "",
+    style_type: source.style_type || profile.style_tendency.join("、"),
+    advantage: softenBeautyCopy(compactSentence(source.advantage, "五官比例协调，适合清透自然的妆容方向。")),
+    improvement: softenBeautyCopy(compactSentence(source.improvement, "更适合强调眉眼层次，并柔化轮廓边界。")),
+    quality: source.quality || { passed: true, message: "照片清晰度通过，已根据本次面部比例重新生成参考博主。" },
+    metrics: source.metrics || fallbackMetrics(input),
+    blogger_match_tags: source.blogger_match_tags || profile.makeup_suitable_tags,
+    makeup_advice: softenBeautyCopy(source.makeup_advice || []),
+    report: softenBeautyCopy(source.report || ""),
+  };
+}
+
+function faceProfilePrompt(text, input) {
+  return [
+    "请从用户照片中提取妆容参考用的 FaceProfile。必须只输出 JSON，不要 Markdown，不要解释。",
+    "不要做身份识别、颜值评分、医学诊断、年龄/性别/种族等敏感判断。",
+    "只允许输出字段：face_profile, result。",
+    "face_profile 必须包含：face_shape, face_length_ratio, forehead_width, forehead_height, cheekbone_width, jaw_width, jaw_type, chin_type, eye_shape, eyelid_type, eye_spacing, eye_size, brow_eye_distance, midface_length, nose_type, lip_type, facial_visual_weight, feature_concentration, soft_hard_tendency, style_tendency, makeup_suitable_tags。",
+    "枚举：face_shape=oval|round|square|long|heart|diamond|oval_round|oval_long；eyelid_type=single|inner_double|double；midface_length=short|medium|long；facial_visual_weight=light|medium|heavy。",
+    "style_tendency 和 makeup_suitable_tags 输出英文数组，例如 clean, soft, natural, daily, eye_makeup, contour, low_saturation。",
+    "result 里可以给 face_shape、advantage、improvement、quality、metrics，但用词只写面部特点、风格特征、适合参考方向、妆容适配建议。",
+    "不要写：缺点、问题区域、需要改善、颜值评分、面部缺陷、下颌问题、鼻子不够立体、你最像谁、相似度。",
+    text ? `用户补充：${text}` : "",
+    input.client_analysis ? `前端辅助比例：${JSON.stringify(input.client_analysis)}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+async function callVisionModel({ apiKey, baseUrl, model, imageDataUrl, text, input, correction = "" }) {
+  const prompt = correction ? `${faceProfilePrompt(text, input)}\n\n上一次输出不符合 schema，请修正：${correction}` : faceProfilePrompt(text, input);
+  const content = imageDataUrl
+    ? [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: imageDataUrl } }]
+    : prompt;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort("timeout"), 45000);
+  try {
+    const response = await fetch(completionsUrl(baseUrl), {
+      method: "POST",
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: "你是审慎的妆容参考结构化分析器，只输出可解析 JSON。" },
+          { role: "user", content },
+        ],
+        temperature: 0.2,
+      }),
+    });
+    const raw = await response.text().catch(() => "");
+    if (!response.ok) return { ok: false, status: 502, detail: `AI 接口请求失败：${raw.slice(0, 500)}` };
+    const data = JSON.parse(raw);
+    const assistantText = extractAssistantText(data);
+    if (!assistantText) return { ok: false, status: 502, detail: "AI 返回格式异常，未找到有效内容。" };
+    return { ok: true, parsed: extractJsonObject(assistantText), raw_text: assistantText, usage: data.usage || null };
+  } catch (error) {
+    const isTimeout = error?.name === "AbortError" || error === "timeout";
+    return { ok: false, status: isTimeout ? 504 : 502, detail: isTimeout ? "AI 接口请求超时，请稍后重试。" : `AI 接口请求失败：${error?.message || error}` };
+  } finally {
+    clearTimeout(timeout);
   }
-  if (typeof data?.choices?.[0]?.text === "string") return data.choices[0].text;
-  if (typeof data?.output_text === "string") return data.output_text;
-  if (Array.isArray(data?.output)) {
-    return data.output
-      .flatMap((item) => item?.content || [])
-      .map((item) => item?.text || "")
-      .join("\n")
-      .trim();
+}
+
+async function analyzeFaceProfile(config) {
+  const first = await callVisionModel(config);
+  if (!first.ok) return first;
+  const firstProfile = profileFromParsed(first.parsed, config.input);
+  const firstValidation = validateFaceProfile(firstProfile);
+  if (firstValidation.ok) return { ...first, face_profile: firstProfile };
+
+  const retry = await callVisionModel({ ...config, correction: firstValidation.errors.join("；") });
+  if (!retry.ok) return retry;
+  const retryProfile = profileFromParsed(retry.parsed, config.input);
+  const retryValidation = validateFaceProfile(retryProfile);
+  if (!retryValidation.ok) {
+    return { ok: false, status: 502, detail: `AI 返回 FaceProfile 字段异常：${retryValidation.errors.join("；")}` };
   }
-  return "";
+  return { ...retry, face_profile: retryProfile };
+}
+
+async function readCachedProfile(env, imageHash) {
+  if (!env.DB || !imageHash) return null;
+  const row = await env.DB.prepare(
+    "SELECT id, face_profile, raw_ai_result FROM user_face_profiles WHERE image_hash = ? AND analysis_version = ? LIMIT 1"
+  ).bind(imageHash, ANALYSIS_VERSION).first();
+  if (!row) return null;
+  return { id: row.id, profile: JSON.parse(row.face_profile), raw_ai_result: row.raw_ai_result };
+}
+
+async function saveProfile(env, imageHash, profile, rawText, model) {
+  if (!env.DB) return `local-${Date.now()}`;
+  const id = crypto.randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO user_face_profiles
+     (id, image_hash, analysis_version, face_profile, raw_ai_result, model_name, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).bind(id, imageHash, ANALYSIS_VERSION, JSON.stringify(profile), rawText || "", model || "", now).run();
+  const row = await readCachedProfile(env, imageHash);
+  return row?.id || id;
+}
+
+async function saveRecommendationLogs(env, clientId, profileId, recommendations) {
+  if (!env.DB) return;
+  const now = Math.floor(Date.now() / 1000);
+  await Promise.all(recommendations.map((item) => env.DB.prepare(
+    `INSERT INTO recommendation_logs
+     (id, user_id, user_face_profile_id, blogger_id, overall_score, dimension_scores, matched_features, different_features, algorithm_version, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    crypto.randomUUID(),
+    clientId || "",
+    profileId || "",
+    item.blogger_id,
+    item.score,
+    JSON.stringify(item.dimension_scores),
+    JSON.stringify(item.matched_features),
+    JSON.stringify(item.different_features),
+    item.algorithm_version,
+    now
+  ).run()));
 }
 
 async function handleAnalyze(context) {
   const { request, env } = context;
-
   let input;
   try {
     input = await request.json();
@@ -219,131 +341,61 @@ async function handleAnalyze(context) {
   const clientId = normalizeClientId(input.client_id || input.clientId);
   const emailVerified = await getVerifiedEmail(env, email);
   let shouldConsumeFreeQuota = false;
-
   if (!emailVerified) {
     const freeQuota = await getFreeQuota(env, clientId);
-    if (!freeQuota.ok) {
-      return jsonResponse({ ok: false, detail: freeQuota.detail }, freeQuota.status);
-    }
+    if (!freeQuota.ok) return jsonResponse({ ok: false, detail: freeQuota.detail }, freeQuota.status);
     shouldConsumeFreeQuota = true;
   }
 
   const apiKey = env.AI_API_KEY;
   const baseUrl = env.AI_BASE_URL;
   const model = env.AI_MODEL;
-
   if (!apiKey) return jsonResponse({ ok: false, detail: "API Key 未配置，请在 Cloudflare Pages 环境变量设置 AI_API_KEY。" }, 500);
   if (!baseUrl) return jsonResponse({ ok: false, detail: "AI_BASE_URL 未配置，请在 Cloudflare Pages 环境变量设置 AI_BASE_URL。" }, 500);
   if (!model) return jsonResponse({ ok: false, detail: "AI_MODEL 未配置，请在 Cloudflare Pages 环境变量设置 AI_MODEL。" }, 500);
 
   const text = String(input.text || input.prompt || "").trim();
   const imageDataUrl = String(input.image_data_url || input.imageDataUrl || "").trim();
-  if (!text && !imageDataUrl) {
-    return jsonResponse({ ok: false, detail: "请上传图片或输入文字后再开始分析。" }, 400);
+  if (!text && !imageDataUrl) return jsonResponse({ ok: false, detail: "请上传图片或输入文字后再开始分析。" }, 400);
+
+  await ensureTables(env);
+  const imageHash = await sha256(imageDataUrl);
+  const cached = await readCachedProfile(env, imageHash);
+  let profile = cached?.profile;
+  let profileId = cached?.id;
+  let parsed = cached?.raw_ai_result ? extractJsonObject(cached.raw_ai_result) : null;
+  let usedCache = Boolean(cached);
+
+  if (!profile) {
+    const analyzed = await analyzeFaceProfile({ apiKey, baseUrl, model, imageDataUrl, text, input });
+    if (!analyzed.ok) return jsonResponse({ ok: false, detail: analyzed.detail }, analyzed.status || 502);
+    profile = analyzed.face_profile;
+    parsed = analyzed.parsed;
+    profileId = await saveProfile(env, imageHash, profile, analyzed.raw_text, model);
   }
 
-  const userPrompt = [
-    "请做 AI 变美测试分析。必须只输出 JSON，不要 Markdown。",
-    "字段包括：face_shape, eye_shape, skin_color, style_type, advantage, improvement, quality, metrics, blogger_match_tags, makeup_advice, report。",
-    "只做风格、比例、妆容建议；不要做身份识别、颜值打分、医疗诊断或敏感属性判断。",
-    text ? `用户补充：${text}` : "",
-    input.client_analysis ? `前端辅助比例：${JSON.stringify(input.client_analysis)}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const bloggerState = await readUsableBloggers(env);
+  const recommendations = rankBloggers(profile, bloggerState.bloggers, 5);
+  await saveRecommendationLogs(env, clientId, profileId, recommendations).catch((error) => {
+    console.error("recommendation log error", error);
+  });
 
-  const safePrompt = [
-    "请做女性妆容参考与面部风格分析。必须只输出 JSON，不要 Markdown。",
-    "字段包括：face_shape, eye_shape, skin_color, style_type, advantage, improvement, quality, metrics, blogger_match_tags, makeup_advice, report。",
-    "只做风格、比例、妆容建议；不要做身份识别、颜值打分、医疗诊断或敏感属性判断。",
-    "不要写这些词：缺点、问题区域、需要改善、颜值评分、面部缺陷、下颌问题、鼻子不够立体、你最像谁、相似度。",
-    "用更温和的表达：面部特点、风格特征、适合参考方向、妆容适配建议、五官特点、适合学习的妆容重点。",
-    "不要强调用户长得像某个博主，只能表达：根据脸型比例和妆容风格，适合参考某类妆容博主。",
-    "advantage 字段用 1 到 3 条短句描述五官特点，每条不超过 28 个中文字符。",
-    "improvement 字段用 1 到 3 条短句描述适合参考方向，每条不超过 28 个中文字符，例如：更适合强调眉眼层次、适合柔化轮廓边界。",
-    "blogger_match_tags 只能输出妆容学习标签，例如：脸型参考、眼妆参考、眉型参考、唇腮参考、底妆参考。",
-    text ? `用户补充：${text}` : "",
-    input.client_analysis ? `前端辅助比例：${JSON.stringify(input.client_analysis)}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  const content = imageDataUrl
-    ? [
-        { type: "text", text: safePrompt },
-        { type: "image_url", image_url: { url: imageDataUrl } },
-      ]
-    : safePrompt;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort("timeout"), 45000);
-
-  let aiResponse;
-  try {
-    aiResponse = await fetch(completionsUrl(baseUrl), {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: "system",
-            content: "你是审慎的女性美妆成长顾问，回答必须是可解析 JSON。",
-          },
-          { role: "user", content },
-        ],
-        temperature: 0.4,
-      }),
-    });
-  } catch (error) {
-    const isTimeout = error?.name === "AbortError" || error === "timeout";
-    return jsonResponse(
-      {
-        ok: false,
-        detail: isTimeout ? "AI 接口请求超时，请稍后重试。" : `AI 接口请求失败：${error?.message || error}`,
-      },
-      isTimeout ? 504 : 502
-    );
-  } finally {
-    clearTimeout(timeout);
+  if (shouldConsumeFreeQuota && !usedCache) {
+    await consumeFreeQuota(env, clientId);
   }
 
-  if (!aiResponse.ok) {
-    const detail = await aiResponse.text().catch(() => `HTTP ${aiResponse.status}`);
-    return jsonResponse({ ok: false, detail: `AI 接口请求失败：${detail.slice(0, 500)}` }, 502);
-  }
-
-  const responseText = await aiResponse.text().catch(() => "");
-  let data;
-  try {
-    data = JSON.parse(responseText);
-  } catch {
-    return jsonResponse({ ok: false, detail: `AI 返回格式异常，无法解析 JSON：${responseText.slice(0, 300)}` }, 502);
-  }
-
-  const rawText = extractAssistantText(data);
-  if (!rawText) {
-    return jsonResponse({ ok: false, detail: `AI 返回格式异常，未找到有效内容：${JSON.stringify(data).slice(0, 500)}` }, 502);
-  }
-
-  if (shouldConsumeFreeQuota) {
-    try {
-      await consumeFreeQuota(env, clientId);
-    } catch (error) {
-      console.error("free quota consume error", error);
-      return jsonResponse({ ok: false, detail: "免费次数记录失败，请稍后重试。" }, 500);
-    }
-  }
-
-  const parsed = extractJsonObject(rawText);
   return jsonResponse({
     ok: true,
-    result: normalizeResult(parsed, input),
-    raw_text: rawText,
+    result: {
+      ...legacyResultFields(profile, parsed, input),
+      face_profile: profile,
+      recommendations,
+      category_recommendations: categoryRecommendations(recommendations),
+      recommendation_source: bloggerState.source,
+      recommendation_db_count: bloggerState.db_count ?? bloggerState.bloggers.length,
+      analysis_version: ANALYSIS_VERSION,
+      cached: usedCache,
+    },
   });
 }
 
@@ -352,13 +404,7 @@ export async function onRequestPost(context) {
     return await handleAnalyze(context);
   } catch (error) {
     console.error("analyze error", error);
-    return jsonResponse(
-      {
-        ok: false,
-        detail: `AI 分析服务异常：${error?.message || error || "未知错误"}`,
-      },
-      500
-    );
+    return jsonResponse({ ok: false, detail: `AI 分析服务异常：${error?.message || error || "未知错误"}` }, 500);
   }
 }
 

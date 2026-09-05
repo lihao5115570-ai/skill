@@ -909,6 +909,19 @@
       }
 
       function rankCreators(metrics, analysis = {}) {
+        if (Array.isArray(analysis.recommendations) && analysis.recommendations.length) {
+          return analysis.recommendations.map((creator) => ({
+            ...creator,
+            source: creator.source || creator.source_url || "",
+            tutorial: creator.tutorial || creator.tutorial_url || creator.source || "",
+            avatar: creator.avatar || creator.avatar_url || "",
+            cover: creator.cover || creator.cover_url || creator.avatar || creator.avatar_url || "",
+            learn: (creator.learn_points || creator.makeup_suitable_tags || []).join("、"),
+            focus: creator.learn_points || creator.makeup_suitable_tags || [],
+            score: creator.score || creator.overall_match || creator.dimension_scores?.overall_match || 88,
+            reasons: creator.reasons || creator.matched_features?.map((item) => `${item.label}适合参考`) || [],
+          }));
+        }
         const scored = [...creators, ...legacyCreators]
           .map((creator) => ({ ...creator, score: scoreCreator(metrics, creator, analysis), reasons: explainMatch(metrics, creator, analysis) }))
           .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "zh-Hans-CN"));
@@ -1035,8 +1048,7 @@
       }
 
       function renderCreators(ranked, analysis = {}) {
-        const topWithRealImages = ranked.filter(hasRealCreatorImage).slice(0, 3);
-        const top = topWithRealImages.length >= 3 ? topWithRealImages : ranked.slice(0, 3);
+        const top = ranked.slice(0, 3);
         const side = document.getElementById("sideCreatorList");
         side.innerHTML = top.map((creator) => `
           <a href="${creator.source}" target="_blank" rel="noreferrer" title="打开 ${creator.name} 的抖音主页">
